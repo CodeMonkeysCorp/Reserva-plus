@@ -3,10 +3,12 @@ Sistema Web de Gestão e Agendamento de Quadras e Quiosques
 
 **Integrantes:**
 - José Henrique Brühmüller
-- Matheus Busemayer
+- Matheus Büsemayer
 
 **Disciplina:** Programação Web – Baseada em Projetos
+
 **Professor:** Luiz Carlos Camargo
+
 
 **1. Domínio do Problema**
 
@@ -39,12 +41,19 @@ O **Reserva+** é uma aplicação Web para gerenciamento e agendamento de espaç
 **2. Escopo do Projeto**
 
 **Escopo Mínimo (Conforme disciplina)**
+
 ✔ 1 CRUD completo (Espaço)
+
 ✔ 1 Transação (Reserva de horário)
+
 ✔ Autenticação com login/token
+
 ✔ API REST
+
 ✔ Persistência em banco relacional
+
 ✔ Aplicação Web funcional
+
 
 **3. Requisitos**
 
@@ -70,10 +79,15 @@ O **Reserva+** é uma aplicação Web para gerenciamento e agendamento de espaç
 **4. Arquitetura do Sistema**
 
 **Arquitetura Client-Server:**
+
 Angular (Frontend SPA)
+
 ⬇
+
 Spring Boot (Backend REST API)
+
 ⬇
+
 MySQL (Banco de Dados)
 
 **Padrão Arquitetural**
@@ -167,9 +181,7 @@ Processo:
 5. Caso exista conflito → rollback automático.
 
 A operação será controlada via:
-@Transactional
-
-para garantir integridade.
+**@Transactional** para garantir integridade.
 
 **8. Padrões de Projeto Aplicados**
 - MVC
