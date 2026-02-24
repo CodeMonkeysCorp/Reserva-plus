@@ -80,15 +80,7 @@ O **Reserva+** é uma aplicação Web para gerenciamento e agendamento de espaç
 
 **Arquitetura Client-Server:**
 
-Angular (Frontend SPA)
-
-⬇
-
-Spring Boot (Backend REST API)
-
-⬇
-
-MySQL (Banco de Dados)
+Angular (Frontend SPA) → Spring Boot (Backend REST API) → MySQL (Banco de Dados)
 
 **Padrão Arquitetural**
 MVC (Model-View-Controller)
