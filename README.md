@@ -143,7 +143,7 @@ Angular como SPA (Single Page Application)
 
 **6. Modelo de Dados (Inicial)**
 
-Usuario
+**Usuario**
 1. id
 2. nome
 3. email
@@ -173,15 +173,14 @@ Usuario
 **7. Transação Principal**
 Criação de Reserva
 
-Processo:
+**Processo:**
 1. Verificar se o espaço está ativo.
 2. Verificar conflito de horário.
 3. Criar reserva.
 4. Confirmar transação.
 5. Caso exista conflito → rollback automático.
 
-A operação será controlada via:
-**@Transactional** para garantir integridade.
+A operação será controlada via **@Transactional** para garantir integridade.
 
 **8. Padrões de Projeto Aplicados**
 - MVC
@@ -230,7 +229,3 @@ A operação será controlada via:
 - Melhorias de UX
 - Segurança refinada
 - Deploy
-
-**11. Repositório**
-
-https://github.com/JHBruhmuller/Reserva-plus
