@@ -1,0 +1,57 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Reserva+ - Component Diagram
+
+Person(usuario, "Usuário", "Morador do condomínio")
+
+System_Boundary(reserva_plus, "Reserva+ Sistema Web") {
+
+    Container(webapp, "Spring Boot Application", "Java + Spring Boot") {
+
+        Component(authController, "AuthController", "Controller")
+        Component(reservaController, "ReservaController", "Controller")
+        Component(espacoController, "EspacoController", "Controller")
+        Component(bloqueioController, "BloqueioController", "Controller")
+
+        Component(authService, "AuthService", "Service")
+        Component(reservaService, "ReservaService", "Service")
+        Component(espacoService, "EspacoService", "Service")
+        Component(bloqueioService, "BloqueioService", "Service")
+
+        Component(usuarioRepo, "UsuarioRepository", "Repository")
+        Component(reservaRepo, "ReservaRepository", "Repository")
+        Component(espacoRepo, "EspacoRepository", "Repository")
+        Component(bloqueioRepo, "BloqueioRepository", "Repository")
+
+        Component(jwtFilter, "JwtAuthenticationFilter", "Security")
+        Component(jwtService, "JwtService", "Security")
+        Component(userDetailsService, "CustomUserDetailsService", "Security")
+
+    }
+
+}
+
+ContainerDb(db, "Database", "PostgreSQL / MySQL", "Armazena reservas, usuários e espaços")
+
+Rel(usuario, authController, "Login / Requisições HTTP")
+
+Rel(authController, authService, "Usa")
+Rel(reservaController, reservaService, "Usa")
+Rel(espacoController, espacoService, "Usa")
+Rel(bloqueioController, bloqueioService, "Usa")
+
+Rel(authService, usuarioRepo, "Consulta usuários")
+Rel(reservaService, reservaRepo, "Gerencia reservas")
+Rel(espacoService, espacoRepo, "Gerencia espaços")
+Rel(bloqueioService, bloqueioRepo, "Gerencia bloqueios")
+
+Rel(usuarioRepo, db, "CRUD")
+Rel(reservaRepo, db, "CRUD")
+Rel(espacoRepo, db, "CRUD")
+Rel(bloqueioRepo, db, "CRUD")
+
+Rel(jwtFilter, jwtService, "Valida Token")
+Rel(jwtFilter, userDetailsService, "Carrega usuário")
+
+@enduml
