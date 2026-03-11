@@ -1,0 +1,32 @@
+<div class="app-container">
+  <header class="topbar card-soft">
+    <div class="topbar-inner">
+      <a class="brand" routerLink="/home">Reserva+</a>
+
+      <nav class="topbar-links" *ngIf="isAuthenticated">
+        <a routerLink="/home" routerLinkActive="active">Painel</a>
+        <a routerLink="/reservas" routerLinkActive="active">Reservas</a>
+        <a *ngIf="isAdmin" routerLink="/espacos" routerLinkActive="active">Espacos</a>
+        <a *ngIf="isAdmin" routerLink="/bloqueios" routerLinkActive="active">Bloqueios</a>
+      </nav>
+
+      <div class="topbar-user" *ngIf="(user$ | async) as user; else authLinks">
+        <span class="user-chip">{{ user.nome }} ({{ user.role }})</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="logout()">Sair</button>
+      </div>
+
+      <ng-template #authLinks>
+        <div class="topbar-user">
+          <a routerLink="/login" class="btn btn-sm btn-outline-secondary">Entrar</a>
+          <a routerLink="/register" class="btn btn-sm btn-brand text-white">Criar conta</a>
+        </div>
+      </ng-template>
+    </div>
+  </header>
+
+  <main class="page-content container py-4">
+    <router-outlet></router-outlet>
+  </main>
+
+  <footer class="footer-note">Reserva+ {{ currentYear }} | Programacao Web</footer>
+</div>

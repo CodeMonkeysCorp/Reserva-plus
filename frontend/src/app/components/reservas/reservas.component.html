@@ -1,0 +1,92 @@
+<section class="reserva-grid">
+  <article class="card-soft panel">
+    <h1 class="panel-title">Nova reserva</h1>
+    <p class="panel-subtitle">Selecione espaco, data e horario para registrar a reserva.</p>
+
+    <div class="alert alert-success py-2" *ngIf="successMessage">{{ successMessage }}</div>
+    <div class="alert alert-danger py-2" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+    <div *ngIf="loading" class="text-muted">Carregando espacos...</div>
+
+    <form *ngIf="!loading" [formGroup]="form" (ngSubmit)="criarReserva()" novalidate>
+      <div class="mb-3">
+        <label class="form-label" for="espacoId">Espaco</label>
+        <select id="espacoId" class="form-select" formControlName="espacoId">
+          <option [value]="0" disabled>Selecione um espaco</option>
+          <option *ngFor="let espaco of espacos" [value]="espaco.id" [disabled]="!espaco.ativo">
+            {{ espaco.nome }} ({{ espaco.tipo }}) {{ espaco.ativo ? '' : '- INATIVO' }}
+          </option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="data">Data</label>
+        <input id="data" type="date" class="form-control" formControlName="data" />
+      </div>
+
+      <div class="time-row">
+        <div class="mb-3">
+          <label class="form-label" for="inicio">Inicio</label>
+          <input id="inicio" type="time" class="form-control" formControlName="horarioInicio" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="fim">Fim</label>
+          <input id="fim" type="time" class="form-control" formControlName="horarioFim" />
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-brand text-white" [disabled]="creating">
+        {{ creating ? 'Salvando...' : 'Criar reserva' }}
+      </button>
+    </form>
+  </article>
+
+  <article class="card-soft panel">
+    <h2 class="panel-title">Historico de reservas</h2>
+    <p class="panel-subtitle">
+      {{ isAdmin ? 'Como ADMIN voce visualiza todas as reservas.' : 'Visualize e gerencie suas reservas.' }}
+    </p>
+
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Espaco</th>
+            <th>Data</th>
+            <th>Horario</th>
+            <th>Status</th>
+            <th>Usuario</th>
+            <th class="text-end">Acao</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let reserva of historico">
+            <td>{{ reserva.espacoNome }}</td>
+            <td>{{ reserva.data | date: 'dd/MM/yyyy' }}</td>
+            <td>{{ reserva.horarioInicio | slice:0:5 }} - {{ reserva.horarioFim | slice:0:5 }}</td>
+            <td>
+              <span class="badge" [class.bg-success]="reserva.status === 'ATIVA'" [class.bg-secondary]="reserva.status === 'CANCELADA'">
+                {{ reserva.status }}
+              </span>
+            </td>
+            <td>{{ reserva.usuarioNome }}</td>
+            <td class="text-end">
+              <button
+                *ngIf="reserva.status === 'ATIVA'"
+                type="button"
+                class="btn btn-sm btn-outline-danger"
+                [disabled]="cancelling"
+                (click)="cancelarReserva(reserva)"
+              >
+                Cancelar
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="historico.length === 0">
+            <td colspan="6" class="text-center text-muted py-3">Nenhuma reserva encontrada.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>

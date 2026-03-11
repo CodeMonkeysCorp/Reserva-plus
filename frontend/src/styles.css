@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap');
+
+:root {
+  --bg: #eef5f1;
+  --card: #ffffff;
+  --primary: #0f6b4d;
+  --primary-2: #145f9c;
+  --danger: #c23b3b;
+  --text: #1d2b24;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(20, 95, 156, 0.2), transparent 30%),
+    radial-gradient(circle at 85% 100%, rgba(15, 107, 77, 0.18), transparent 32%),
+    linear-gradient(170deg, #eff8f3 0%, #f7f8fb 100%);
+  color: var(--text);
+  font-family: "Outfit", "Trebuchet MS", sans-serif;
+}
+
+.app-container {
+  min-height: 100vh;
+}
+
+.card-soft {
+  background: var(--card);
+  border: 1px solid rgba(29, 43, 36, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(10, 30, 23, 0.08);
+}
+
+.btn-brand {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-brand:hover {
+  background-color: #0b5d43;
+  border-color: #0b5d43;
+}
+
+.table thead th {
+  white-space: nowrap;
+}

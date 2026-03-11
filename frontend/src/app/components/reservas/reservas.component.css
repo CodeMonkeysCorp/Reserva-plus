@@ -1,0 +1,33 @@
+.reserva-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 1rem;
+}
+
+.panel {
+  padding: 1rem 1.1rem;
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+.panel-subtitle {
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  color: #5b7468;
+}
+
+.time-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+}
+
+@media (max-width: 980px) {
+  .reserva-grid {
+    grid-template-columns: 1fr;
+  }
+}

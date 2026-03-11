@@ -1,0 +1,36 @@
+.auth-page {
+  min-height: calc(100vh - 240px);
+  display: grid;
+  place-items: center;
+}
+
+.auth-card {
+  width: min(460px, 100%);
+  padding: 1.8rem;
+}
+
+.auth-title {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  margin: 0;
+  color: #113a2b;
+}
+
+.auth-subtitle {
+  margin-top: 0.35rem;
+  color: #5f776b;
+  margin-bottom: 1.2rem;
+}
+
+.auth-footer {
+  margin-top: 1.2rem;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  font-size: 0.95rem;
+}
+
+.auth-footer a {
+  color: var(--primary-2);
+  font-weight: 600;
+  text-decoration: none;
+}

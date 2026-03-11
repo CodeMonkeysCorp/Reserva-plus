@@ -1,0 +1,101 @@
+.topbar {
+  margin: 1rem auto 0;
+  max-width: 1160px;
+  border-radius: 0 0 16px 16px;
+  padding: 0.6rem 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  backdrop-filter: blur(8px);
+}
+
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.brand {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-decoration: none;
+  letter-spacing: 0.4px;
+}
+
+.topbar-links {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-left: 0.4rem;
+}
+
+.topbar-links a {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.topbar-links a:hover {
+  background: rgba(15, 107, 77, 0.12);
+}
+
+.topbar-links a.active {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.topbar-user {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.user-chip {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #284636;
+  background: rgba(15, 107, 77, 0.12);
+  border-radius: 999px;
+  padding: 0.38rem 0.75rem;
+}
+
+.page-content {
+  max-width: 1160px;
+}
+
+.footer-note {
+  text-align: center;
+  padding: 0.8rem 0 1.2rem;
+  color: #4f6a5d;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    margin: 0;
+    border-radius: 0;
+  }
+
+  .topbar-inner {
+    flex-wrap: wrap;
+  }
+
+  .topbar-links {
+    width: 100%;
+    order: 3;
+    margin-left: 0;
+    margin-top: 0.2rem;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+  }
+
+  .topbar-user {
+    margin-left: auto;
+  }
+}

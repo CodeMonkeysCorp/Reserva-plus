@@ -1,0 +1,89 @@
+<section class="page-grid">
+  <article class="card-soft panel">
+    <h1 class="panel-title">{{ editingId ? 'Editar espaco' : 'Novo espaco' }}</h1>
+    <p class="panel-subtitle">Cadastre quadras e quiosques para disponibilidade de reservas.</p>
+
+    <div class="alert alert-success py-2" *ngIf="successMessage">{{ successMessage }}</div>
+    <div class="alert alert-danger py-2" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="mb-3">
+        <label class="form-label" for="nome">Nome</label>
+        <input id="nome" type="text" class="form-control" formControlName="nome" />
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="tipo">Tipo</label>
+        <select id="tipo" class="form-select" formControlName="tipo">
+          <option *ngFor="let tipo of tipos" [value]="tipo">{{ tipo }}</option>
+        </select>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label" for="descricao">Descricao</label>
+        <textarea id="descricao" class="form-control" rows="3" formControlName="descricao"></textarea>
+      </div>
+
+      <div class="form-check mb-3">
+        <input id="ativo" type="checkbox" class="form-check-input" formControlName="ativo" />
+        <label class="form-check-label" for="ativo">Espaco ativo para reservas</label>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-brand text-white" [disabled]="saving">
+          {{ saving ? 'Salvando...' : (editingId ? 'Atualizar' : 'Criar espaco') }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          *ngIf="editingId"
+          [disabled]="saving"
+          (click)="cancelEdit()"
+        >
+          Cancelar edicao
+        </button>
+      </div>
+    </form>
+  </article>
+
+  <article class="card-soft panel">
+    <h2 class="panel-title">Espacos cadastrados</h2>
+    <div *ngIf="loading" class="text-muted">Carregando espacos...</div>
+
+    <div class="table-responsive" *ngIf="!loading">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Tipo</th>
+            <th>Status</th>
+            <th class="text-end">Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let espaco of espacos">
+            <td>
+              <strong>{{ espaco.nome }}</strong>
+              <div class="small text-muted" *ngIf="espaco.descricao">{{ espaco.descricao }}</div>
+            </td>
+            <td>{{ espaco.tipo }}</td>
+            <td>
+              <span class="badge" [class.bg-success]="espaco.ativo" [class.bg-secondary]="!espaco.ativo">
+                {{ espaco.ativo ? 'ATIVO' : 'INATIVO' }}
+              </span>
+            </td>
+            <td class="text-end">
+              <button type="button" class="btn btn-sm btn-outline-primary me-2" (click)="edit(espaco)">Editar</button>
+              <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="saving" (click)="remove(espaco)">
+                Excluir
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="espacos.length === 0">
+            <td colspan="4" class="text-center text-muted py-3">Nenhum espaco cadastrado.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
