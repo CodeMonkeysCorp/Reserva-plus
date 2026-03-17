@@ -1,0 +1,40 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title C2 - Reserva+ (Refined Level)
+
+' Styling to mimic C4
+skinparam rectangle {
+  BackgroundColor #E3F2FD
+  BorderColor #1E88E5
+  RoundCorner 15
+}
+skinparam database {
+  BackgroundColor #FFF3E0
+  BorderColor #FB8C00
+}
+skinparam actor {
+  BackgroundColor #E8F5E9
+  BorderColor #43A047
+}
+
+actor "Usuário" as usuario
+actor "Administrador" as admin
+
+rectangle "Reserva+ System" {
+
+  rectangle "Web Application\n<<Container: Angular (Browser)>>\n\nFornece a interface web do sistema.\nPermite login, visualização e agendamento de reservas.\n\nEntrega SPA ao navegador do usuário." as frontend
+
+  rectangle "API Application\n<<Container: Spring Boot (JVM)>>\n\nFornece funcionalidades via API REST.\nProcessa regras de negócio, valida conflitos e autenticação.\n\nExpõe endpoints JSON/HTTP." as backend
+
+  database "Database\n<<Container: Relational DB Schema>>\n\nArmazena usuários, espaços e reservas.\nGarante integridade e consistência transacional." as db
+
+}
+
+usuario --> frontend : Acessa via navegador (HTTPS)
+admin --> frontend : Acessa e administra (HTTPS)
+
+frontend --> backend : Faz chamadas API (JSON/HTTPS)
+backend --> db : Lê e escreve dados (JPA)
+
+@enduml
