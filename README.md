@@ -91,7 +91,9 @@ O **Reserva+** é uma aplicação Web para gerenciamento e agendamento de espaç
 **C-3:**
 **Componentes**
 
-<img width="574" height="513" alt="image" src="https://github.com/user-attachments/assets/b723632c-1373-4893-aa02-2f3294fb9ba5" />
+<img width="1098" height="205" alt="image" src="https://github.com/user-attachments/assets/1d97b03f-3a7e-4dd8-827d-fdf069b3dcd5" />
+
+
 
 
 **Arquitetura Client-Server:**
