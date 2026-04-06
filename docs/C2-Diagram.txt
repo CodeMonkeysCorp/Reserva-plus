@@ -23,9 +23,9 @@ actor "Administrador" as admin
 
 rectangle "Reserva+ System" {
 
-  rectangle "Web Application\n<<Container: Angular (Browser)>>\n\nFornece a interface web do sistema.\nPermite login, visualização e agendamento de reservas.\n\nEntrega SPA ao navegador do usuário." as frontend
+  rectangle "Web Application\n<<Container: Web App (Angular SPA)>>\n\nFornece a interface web do sistema.\nPermite login, visualização e agendamento de reservas.\n\nSPA executada no navegador." as frontend
 
-  rectangle "API Application\n<<Container: Spring Boot (JVM)>>\n\nFornece funcionalidades via API REST.\nProcessa regras de negócio, valida conflitos e autenticação.\n\nExpõe endpoints JSON/HTTP." as backend
+  rectangle "API Application\n<<Container: Spring Boot (JVM)>>\n\nDisponibiliza serviços via API REST (JSON sobre HTTP).\nProcessa regras de negócio, valida conflitos e autenticação.\n\nExpõe endpoints REST." as backend
 
   database "Database\n<<Container: Relational DB Schema>>\n\nArmazena usuários, espaços e reservas.\nGarante integridade e consistência transacional." as db
 

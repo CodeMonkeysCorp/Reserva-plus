@@ -1,57 +1,78 @@
-@startuml
+@startuml C3_ReservaPlus
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
-title Reserva+ - Component Diagram
+' Força layout horizontal
+LAYOUT_LEFT_RIGHT()
 
-Person(usuario, "Usuário", "Morador do condomínio")
+title C3 - Diagrama de Componentes - Reserva+ (Versão 2.2)
 
-System_Boundary(reserva_plus, "Reserva+ Sistema Web") {
+Person(usuario, "Usuário", "Usuário do sistema")
+Person(admin, "Administrador", "Gerencia espaços e horários")
 
-    Container(webapp, "Spring Boot Application", "Java + Spring Boot") {
+Container_Boundary(system, "Reserva+ System") {
 
-        Component(authController, "AuthController", "Controller")
-        Component(reservaController, "ReservaController", "Controller")
-        Component(espacoController, "EspacoController", "Controller")
-        Component(bloqueioController, "BloqueioController", "Controller")
-
-        Component(authService, "AuthService", "Service")
-        Component(reservaService, "ReservaService", "Service")
-        Component(espacoService, "EspacoService", "Service")
-        Component(bloqueioService, "BloqueioService", "Service")
-
-        Component(usuarioRepo, "UsuarioRepository", "Repository")
-        Component(reservaRepo, "ReservaRepository", "Repository")
-        Component(espacoRepo, "EspacoRepository", "Repository")
-        Component(bloqueioRepo, "BloqueioRepository", "Repository")
-
-        Component(jwtFilter, "JwtAuthenticationFilter", "Security")
-        Component(jwtService, "JwtService", "Security")
-        Component(userDetailsService, "CustomUserDetailsService", "Security")
-
+    Container_Boundary(web, "Web Application (Angular)") {
+        Component(ui, "UI Components", "Angular", "Telas e componentes visuais")
+        Component(auth_guard, "Auth Guard", "Angular", "Protege rotas e verifica permissões (Roles)")
+        Component(api_service, "API Service", "Angular", "Comunicação HTTP/JSON e tratamento de respostas")
     }
 
+    Container_Boundary(api, "API Application (Spring Boot)") {
+        Component(security, "Security Config + JWT Filter", "Spring Security", "Interceptor de requisições e validação de Token")
+        
+        Component(auth_controller, "AuthController", "REST Controller", "Login e autenticação")
+        Component(usuario_controller, "UsuarioController", "REST Controller", "Cadastro (Público) e Gestão de Perfil")
+        Component(espaco_controller, "EspacoController", "REST Controller", "CRUD de espaços")
+        Component(reserva_controller, "ReservaController", "REST Controller", "Gerenciamento de reservas")
+
+        Component(auth_service, "AuthService", "Service", "Autenticação e geração de JWT")
+        Component(usuario_service, "UsuarioService", "Service", "Regras de usuários")
+        Component(espaco_service, "EspacoService", "Service", "Regras de espaços")
+        Component(reserva_service, "ReservaService", "Service", "Validação de conflitos e persistência transacional")
+
+        Component(usuario_repo, "UsuarioRepository", "JPA Repository", "Acesso a dados de usuários")
+        Component(espaco_repo, "EspacoRepository", "JPA Repository", "Acesso a dados de espaços")
+        Component(reserva_repo, "ReservaRepository", "JPA Repository", "Acesso a dados de reservas")
+    }
+
+    ContainerDb(db, "Database", "MySQL", "Armazena usuários, espaços e reservas")
 }
 
-ContainerDb(db, "Database", "PostgreSQL / MySQL", "Armazena reservas, usuários e espaços")
+' --- RELAÇÕES FRONTEND ---
+Rel(usuario, ui, "Usa via navegador")
+Rel(admin, ui, "Administra via navegador")
+Rel(ui, auth_guard, "Verifica permissão de rota")
+Rel(ui, api_service, "Solicita dados", "JSON/HTTP")
+Rel_Back(ui, api_service, "Retorna dados/feedback", "JSON")
 
-Rel(usuario, authController, "Login / Requisições HTTP")
+' --- RELAÇÕES BACKEND (ENTRY POINTS) ---
+Rel(api_service, auth_controller, "POST /login")
+Rel(api_service, usuario_controller, "POST /register (Acesso Público)")
+Rel(api_service, security, "Requisições Autenticadas", "JWT Header")
 
-Rel(authController, authService, "Usa")
-Rel(reservaController, reservaService, "Usa")
-Rel(espacoController, espacoService, "Usa")
-Rel(bloqueioController, bloqueioService, "Usa")
+' --- LÓGICA DE SEGURANÇA ---
+Rel(security, espaco_controller, "Protege/Autoriza")
+Rel(security, reserva_controller, "Protege/Autoriza")
+Rel(security, usuario_controller, "Protege (exceto POST)")
+Rel(auth_service, security, "Fornece contexto de autenticação")
 
-Rel(authService, usuarioRepo, "Consulta usuários")
-Rel(reservaService, reservaRepo, "Gerencia reservas")
-Rel(espacoService, espacoRepo, "Gerencia espaços")
-Rel(bloqueioService, bloqueioRepo, "Gerencia bloqueios")
+' --- FLUXO INTERNO ---
+Rel(auth_controller, auth_service, "Usa")
+Rel(usuario_controller, usuario_service, "Usa")
+Rel(espaco_controller, espaco_service, "Usa")
+Rel(reserva_controller, reserva_service, "Usa")
 
-Rel(usuarioRepo, db, "CRUD")
-Rel(reservaRepo, db, "CRUD")
-Rel(espacoRepo, db, "CRUD")
-Rel(bloqueioRepo, db, "CRUD")
+' --- INTEGRAÇÃO DE REGRAS DE NEGÓCIO (Ponto 2.B) ---
+Rel(reserva_service, espaco_repo, "Valida disponibilidade", "SELECT")
+Rel(reserva_service, usuario_repo, "Valida usuário", "SELECT")
 
-Rel(jwtFilter, jwtService, "Valida Token")
-Rel(jwtFilter, userDetailsService, "Carrega usuário")
+' --- PERSISTÊNCIA ---
+Rel(usuario_service, usuario_repo, "Usa")
+Rel(espaco_service, espaco_repo, "Usa")
+Rel(reserva_service, reserva_repo, "Salva reserva", "@Transactional")
+
+Rel(usuario_repo, db, "CRUD")
+Rel(espaco_repo, db, "CRUD")
+Rel(reserva_repo, db, "CRUD")
 
 @enduml
