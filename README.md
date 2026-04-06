@@ -78,6 +78,24 @@ O **Reserva+** é uma aplicação Web para gerenciamento e agendamento de espaç
 
 **4. Arquitetura do Sistema**
 
+**C-1:**
+**Contexto de sistema**
+
+<img width="474" height="425" alt="image" src="https://github.com/user-attachments/assets/a808f2d2-b997-4ed0-b931-ef83f077809a" />
+
+**C-2:**
+**Contêineres**
+
+<img width="313" height="972" alt="image" src="https://github.com/user-attachments/assets/0d783a55-121b-41d6-a511-c151cc06d65c" />
+
+**C-3:**
+**Componentes**
+
+<img width="1098" height="205" alt="image" src="https://github.com/user-attachments/assets/1d97b03f-3a7e-4dd8-827d-fdf069b3dcd5" />
+
+
+
+
 **Arquitetura Client-Server:**
 
 Angular (Frontend SPA) → Spring Boot (Backend REST API) → MySQL (Banco de Dados)
