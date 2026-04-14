@@ -396,8 +396,17 @@ Frontend:
 Diagramas C4 originalmente referenciados no projeto:
 
 - Contexto do sistema
+  
+  <img width="474" height="425" alt="image" src="https://github.com/user-attachments/assets/e03b33aa-f01d-4825-9d85-965523b0d9c2" />
+
 - Contêineres
+
+  <img width="313" height="972" alt="image" src="https://github.com/user-attachments/assets/a13bedf6-e01e-4d07-9e88-5994ba4aa81e" />
+
 - Componentes
+
+  <img width="2732" height="511" alt="image" src="https://github.com/user-attachments/assets/7031f810-efb8-420d-8658-f8a7bf3f0f4e" />
+
 
 ### 5. Tecnologias Utilizadas
 
