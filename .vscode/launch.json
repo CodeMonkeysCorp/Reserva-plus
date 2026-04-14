@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Reserva Plus Backend",
+      "request": "launch",
+      "mainClass": "com.reservaplus.reserva_plus.ReservaPlusApplication",
+      "projectName": "reserva-plus-backend",
+      "cwd": "${workspaceFolder}/backend",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}

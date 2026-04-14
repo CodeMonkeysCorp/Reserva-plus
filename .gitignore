@@ -3,6 +3,9 @@
 Thumbs.db
 .idea/
 .vscode/
+!.vscode/
+!.vscode/launch.json
+!.vscode/extensions.json
 *.iml
 
 # Logs
@@ -32,3 +35,4 @@ frontend/.env
 frontend/.env.*
 backend/.env
 backend/.env.*
+!.env.example

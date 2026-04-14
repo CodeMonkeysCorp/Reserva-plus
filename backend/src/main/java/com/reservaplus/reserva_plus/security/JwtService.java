@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Service
@@ -62,12 +63,16 @@ public class JwtService {
 
     private SecretKey buildKey(String secret) {
         if (secret.length() < 32) {
-            return Keys.hmacShaKeyFor((secret + "01234567890123456789012345678901").substring(0, 32).getBytes());
+            return Keys.hmacShaKeyFor(
+                    (secret + "01234567890123456789012345678901")
+                            .substring(0, 32)
+                            .getBytes(StandardCharsets.UTF_8)
+            );
         }
         try {
             return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
-        } catch (IllegalArgumentException ex) {
-            return Keys.hmacShaKeyFor(secret.getBytes());
+        } catch (RuntimeException ex) {
+            return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         }
     }
 }
