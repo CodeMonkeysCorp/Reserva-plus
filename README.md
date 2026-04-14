@@ -1,173 +1,461 @@
-# **Reserva+**
-Sistema Web de Gestão e Agendamento de Quadras e Quiosques
+﻿# Reserva+
 
-**Integrantes:**
-- José Henrique Brühmüller
-- Matheus Büsemayer
+Sistema web para cadastro, gerenciamento e reserva de espaços compartilhados, como quadras e quiosques.
 
-**Disciplina:** Programação Web – Baseada em Projetos
+## Informações do Projeto
 
-**Professor:** Luiz Carlos Camargo
+- Integrantes: José Henrique Brühmüller, Matheus Büsemayer
+- Disciplina: Programação Web - Baseada em Projetos
+- Professor: Luiz Carlos Camargo
 
+## Visão Geral
 
-**1. Domínio do Problema**
+O projeto foi dividido em duas aplicações:
 
-**Contexto:**
+- `frontend/`: SPA em Angular
+- `backend/`: API REST em Spring Boot
 
-**Condomínios, clubes e associações frequentemente enfrentam dificuldades na organização de reservas de:**
-- Quadras esportivas
-- Quiosques
-- Espaços de lazer
+O fluxo principal hoje é:
 
-**Problemas comuns:**
-- Conflito de horários
-- Falta de controle centralizado
-- Cancelamentos desorganizados
-- Ausência de histórico
-- Falta de controle de regras (limite por usuário, horários bloqueados etc.)
+1. usuário cria conta ou faz login
+2. usuário acessa a área de reservas
+3. usuário escolhe espaço, data e horário
+4. sistema valida conflito e bloqueios
+5. reserva é registrada no banco
 
-**Solução Proposta:**
-O **Reserva+** é uma aplicação Web para gerenciamento e agendamento de espaços comuns.
+Usuários comuns veem e gerenciam as próprias reservas.
+Administradores também podem cadastrar espaços e controlar bloqueios de horário.
 
-**O sistema permitirá:**
-1. Cadastro e autenticação de usuários
-2. Cadastro e gerenciamento de espaços
-3. Agendamento de reservas
-4. Cancelamento de reservas
-5. Controle automático de conflitos
-6. Histórico de reservas
-7. Controle administrativo de horários
+## Stack
 
-**2. Escopo do Projeto**
+- Frontend: Angular 17
+- Backend: Spring Boot 3.3
+- Java: 17+
+- Banco: MySQL / MariaDB
+- Autenticação: Spring Security + JWT
 
-**Escopo Mínimo (Conforme disciplina)**
+## Funcionalidades
 
-✔ 1 CRUD completo (Espaço)
+- cadastro de usuários
+- login com token JWT
+- criação e cancelamento de reservas
+- histórico de reservas
+- cadastro e edição de espaços
+- bloqueio de horários por administrador
+- criação automática de usuário admin no primeiro boot
 
-✔ 1 Transação (Reserva de horário)
+## Estrutura do Projeto
 
-✔ Autenticação com login/token
+- `frontend/`: interface web
+- `backend/`: API e regras de negócio
+- `scripts/setup-xampp-db.ps1`: configura o banco local no XAMPP
+- `run-local.ps1`: abre backend e frontend para desenvolvimento local
+- `compose.yaml`: sobe um MySQL local via Docker
 
-✔ API REST
+## Requisitos
 
-✔ Persistência em banco relacional
+### Para rodar com XAMPP
 
-✔ Aplicação Web funcional
+- Java 17 ou superior
+- Maven 3.9+
+- Node.js e npm
+- XAMPP com MySQL/MariaDB
+- PowerShell
 
+### Para rodar com Docker
 
-**3. Requisitos**
+- Java 17 ou superior
+- Maven 3.9+
+- Node.js e npm
+- Docker Desktop
 
-**Requisitos Funcionais (RF):**
-- RF01 – O sistema deve permitir cadastro de usuários.
-- RF02 – O sistema deve permitir autenticação via login.
-- RF03 – O sistema deve permitir CRUD de espaços (quadras/quiosques).
-- RF04 – O sistema deve permitir criar reserva.
-- RF05 – O sistema deve impedir reservas em horários já ocupados.
-- RF06 – O sistema deve permitir cancelamento de reservas.
-- RF07 – O sistema deve manter histórico de reservas.
-- RF08 – O administrador pode bloquear horários.
+## Portas Padrão
 
-**Requisitos Não Funcionais (RNF)**:
-- RNF01 – Arquitetura baseada em MVC.
-- RNF02 – Comunicação via API REST.
-- RNF03 – Persistência relacional com integridade referencial.
-- RNF04 – Senhas armazenadas criptografadas.
-- RNF05 – Controle transacional para evitar conflitos.
-- RNF06 – Versionamento via Git.
-- RNF07 – Tempo de resposta inferior a 2 segundos.
+- frontend: `4200`
+- backend: `8080`
+- banco: `3306`
 
-**4. Arquitetura do Sistema**
+## Rodando Local com XAMPP
 
-**C-1:**
-**Contexto de sistema**
+Esse é o caminho mais simples para o projeto hoje.
 
-<img width="474" height="425" alt="image" src="https://github.com/user-attachments/assets/a808f2d2-b997-4ed0-b931-ef83f077809a" />
+### 1. Ligue o MySQL no XAMPP
 
-**C-2:**
-**Contêineres**
+Abra o XAMPP Control Panel e inicie o serviço `MySQL`.
 
-<img width="313" height="972" alt="image" src="https://github.com/user-attachments/assets/0d783a55-121b-41d6-a511-c151cc06d65c" />
+### 2. Configure o banco local
 
-**C-3:**
-**Componentes**
+Na raiz do projeto:
 
-<img width="1098" height="205" alt="image" src="https://github.com/user-attachments/assets/1d97b03f-3a7e-4dd8-827d-fdf069b3dcd5" />
+```powershell
+.\scripts\setup-xampp-db.ps1
+```
 
+Esse script:
 
+- cria o banco `reserva_plus`
+- cria o usuário `reserva_app`
+- usa a senha `reserva123`
 
+Observação:
 
-**Arquitetura Client-Server:**
+- em alguns ambientes XAMPP/MariaDB, grants por banco podem ficar inconsistentes por causa do mecanismo `Aria`
+- por isso, o script concede acesso global ao usuário `reserva_app`
+- isso é apenas para desenvolvimento local
 
-Angular (Frontend SPA) → Spring Boot (Backend REST API) → MySQL (Banco de Dados)
+### 3. Suba o projeto
 
-**Padrão Arquitetural**
-MVC (Model-View-Controller)
+Na raiz do projeto:
 
-**Backend organizado em camadas:**
-- Controller → Endpoints REST
-- Service → Regras de negócio
-- Repository → Acesso ao banco
-- Model → Entidades JPA
+```powershell
+.\run-local.ps1
+```
 
-**Frontend:**
-Angular como SPA (Single Page Application)
+Esse comando:
 
-**5. Tecnologias Utilizadas**
+- abre o backend em uma janela
+- abre o frontend em outra janela
+- usa o profile Spring `local`
 
-**Java 17+**
-- Linguagem robusta e orientada a objetos
-- Forte tipagem
-- Alinhada com a bibliografia da disciplina
+### 4. Acesse
 
-**Spring Boot**
-- Auto-configuração
-- Embedded Tomcat
-- Injeção de Dependência (IoC)
-- Suporte nativo a REST
-- Estrutura organizada em camadas
+- frontend: `http://localhost:4200`
+- backend: `http://localhost:8080`
+- healthcheck: `http://localhost:8080/actuator/health`
 
-**Spring Data JPA**
-- Abstração de acesso ao banco
-- Redução de código boilerplate
-- Suporte a transações
+### Comandos úteis
 
-**Spring Security + JWT**
-- Autenticação baseada em token
-- API stateless
-- Controle de acesso por perfil
+Subir só o backend:
 
-**MySQL**
-- Banco relacional robusto
-- Suporte a transações (ACID)
-- Ideal para controle de concorrência em reservas
+```powershell
+.\run-local.ps1 -BackendOnly
+```
 
-**DBeaver**
-- Ferramenta para modelagem e administração do banco
-- Facilita testes e visualização de dados
+Subir só o frontend:
 
-**Angular**
-- Framework SPA
-- Arquitetura baseada em componentes
-- Injeção de dependência
-- Integração simples com APIs REST
+```powershell
+.\run-local.ps1 -FrontendOnly
+```
 
-**6. Modelo de Dados (Inicial)**
+## Backend Manual com Profile Local
 
-**Usuario**
+Se quiser subir o backend manualmente:
+
+```powershell
+cd .\backend
+$env:SPRING_PROFILES_ACTIVE="local"
+mvn spring-boot:run
+```
+
+O profile `local` fica em:
+
+- `backend/src/main/resources/application-local.yml`
+
+Esse profile usa:
+
+- host: `127.0.0.1`
+- banco: `reserva_plus`
+- usuário: `reserva_app`
+- senha: `reserva123`
+
+## Frontend Manual
+
+Para subir apenas o frontend:
+
+```powershell
+cd .\frontend
+npm install
+npm start
+```
+
+## Rodando o Banco com Docker
+
+Se preferir padronizar o banco em vez de usar XAMPP, existe um `compose.yaml` na raiz.
+
+### 1. Crie o arquivo `.env`
+
+```powershell
+Copy-Item .env.example .env
+```
+
+### 2. Suba o MySQL
+
+```powershell
+docker compose up -d
+```
+
+### 3. Suba o backend
+
+```powershell
+cd .\backend
+mvn spring-boot:run
+```
+
+### 4. Suba o frontend
+
+```powershell
+cd .\frontend
+npm install
+npm start
+```
+
+## Variáveis de Ambiente do Backend
+
+O backend suporta estas variáveis:
+
+- `DB_URL`
+- `DB_USER`
+- `DB_PASSWORD`
+- `SERVER_PORT`
+- `JWT_SECRET`
+- `JWT_EXPIRATION_MS`
+- `APP_ADMIN_NAME`
+- `APP_ADMIN_EMAIL`
+- `APP_ADMIN_PASSWORD`
+
+Sem sobrescrever nada:
+
+- o setup padrão do Docker usa `reserva / reserva123`
+- o setup local com XAMPP usa o profile `local`
+
+## Credenciais Iniciais
+
+No primeiro boot, se ainda não existir admin no banco, a aplicação cria:
+
+- email: `admin@reserva.local`
+- senha: `admin123`
+
+## Rotas da Aplicação
+
+- `/login`: entrar
+- `/register`: criar conta
+- `/home`: painel do usuário autenticado
+- `/reservas`: criar e visualizar reservas
+- `/espacos`: administração de espaços
+- `/bloqueios`: administração de bloqueios
+
+## Fluxo do Usuário
+
+### Usuário comum
+
+- faz cadastro ou login
+- acessa `/reservas`
+- cria reserva
+- visualiza o próprio histórico
+- cancela as próprias reservas
+
+### Administrador
+
+- faz login
+- acessa todas as reservas
+- cadastra espaços
+- edita espaços
+- controla bloqueios de horário
+
+## Solução de Problemas
+
+### PowerShell bloqueando scripts
+
+Se o PowerShell bloquear `ps1`:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+### Porta 8080 em uso
+
+Se o backend reclamar que a `8080` já está ocupada, provavelmente já existe uma instância rodando.
+
+Para verificar:
+
+```powershell
+Get-NetTCPConnection -LocalPort 8080 -State Listen
+```
+
+### Porta 4200 em uso
+
+Se o frontend já estiver aberto, o Angular pode sugerir outra porta.
+
+### Banco negando acesso no XAMPP
+
+Se aparecer erro de acesso ao banco, rode novamente:
+
+```powershell
+.\scripts\setup-xampp-db.ps1
+```
+
+### Healthcheck
+
+Se quiser validar rapidamente se o backend está no ar:
+
+```text
+http://localhost:8080/actuator/health
+```
+
+Resposta esperada:
+
+```json
+{"status":"UP"}
+```
+
+## Observações
+
+- o backend usa `ddl-auto: update`, então as tabelas são criadas e ajustadas automaticamente
+- o projeto foi preparado para desenvolvimento local em Windows com PowerShell
+- o Docker continua disponível como opção para padronizar o banco entre máquinas
+
+## Documentação do Projeto
+
+### 1. Domínio do Problema
+
+Contexto:
+
+Condomínios, clubes e associações frequentemente enfrentam dificuldades na organização de reservas de:
+
+- quadras esportivas
+- quiosques
+- espaços de lazer
+
+Problemas comuns:
+
+- conflito de horários
+- falta de controle centralizado
+- cancelamentos desorganizados
+- ausência de histórico
+- falta de controle de regras, como limite por usuário e horários bloqueados
+
+Solução proposta:
+
+O `Reserva+` é uma aplicação web para gerenciamento e agendamento de espaços comuns.
+
+O sistema permite:
+
+1. cadastro e autenticação de usuários
+2. cadastro e gerenciamento de espaços
+3. agendamento de reservas
+4. cancelamento de reservas
+5. controle automático de conflitos
+6. histórico de reservas
+7. controle administrativo de horários
+
+### 2. Escopo do Projeto
+
+Escopo mínimo:
+
+- CRUD completo de espaço
+- transação de reserva de horário
+- autenticação com login e token
+- API REST
+- persistência em banco relacional
+- aplicação web funcional
+
+### 3. Requisitos
+
+Requisitos funcionais:
+
+- RF01: permitir cadastro de usuários
+- RF02: permitir autenticação via login
+- RF03: permitir CRUD de espaços
+- RF04: permitir criar reserva
+- RF05: impedir reservas em horários ocupados
+- RF06: permitir cancelamento de reservas
+- RF07: manter histórico de reservas
+- RF08: permitir bloqueio de horários pelo administrador
+
+Requisitos não funcionais:
+
+- RNF01: arquitetura baseada em MVC
+- RNF02: comunicação via API REST
+- RNF03: persistência relacional com integridade referencial
+- RNF04: senhas armazenadas com criptografia
+- RNF05: controle transacional para evitar conflitos
+- RNF06: versionamento via Git
+- RNF07: tempo de resposta inferior a 2 segundos
+
+### 4. Arquitetura do Sistema
+
+Arquitetura client-server:
+
+`Angular (Frontend SPA) -> Spring Boot (Backend REST API) -> MySQL/MariaDB (Banco de Dados)`
+
+Padrão arquitetural:
+
+- MVC
+
+Backend organizado em camadas:
+
+- Controller: endpoints REST
+- Service: regras de negócio
+- Repository: acesso ao banco
+- Model: entidades JPA
+
+Frontend:
+
+- Angular como SPA
+
+Diagramas C4 originalmente referenciados no projeto:
+
+- Contexto do sistema
+- Contêineres
+- Componentes
+
+### 5. Tecnologias Utilizadas
+
+Java 17+:
+
+- linguagem orientada a objetos
+- forte tipagem
+- compatibilidade com Spring Boot 3
+
+Spring Boot:
+
+- auto-configuração
+- servidor embutido
+- injeção de dependência
+- suporte nativo a REST
+
+Spring Data JPA:
+
+- abstração de acesso ao banco
+- menos boilerplate
+- suporte a transações
+
+Spring Security + JWT:
+
+- autenticação stateless
+- controle de acesso por perfil
+
+MySQL / MariaDB:
+
+- banco relacional
+- suporte a transações
+- adequado para controle de concorrência em reservas
+
+Angular:
+
+- SPA baseada em componentes
+- integração com API REST
+
+### 6. Modelo de Dados
+
+Usuário:
+
 1. id
 2. nome
 3. email
 4. senha
-5. role (ADMIN / USER)
+5. role
 
-**Espaco**
+Espaço:
+
 1. id
 2. nome
-3. tipo (QUADRA / QUIOSQUE)
-4. descricao
+3. tipo
+4. descrição
 5. ativo
 
-**Reserva**
+Reserva:
+
 1. id
 2. usuario_id
 3. espaco_id
@@ -176,66 +464,74 @@ Angular como SPA (Single Page Application)
 6. horarioFim
 7. status
 
-**Relacionamentos:**
-- Usuário 1:N Reserva
-- Espaço 1:N Reserva
+Relacionamentos:
 
-**7. Transação Principal**
-Criação de Reserva
+- usuário 1:N reserva
+- espaço 1:N reserva
 
-**Processo:**
-1. Verificar se o espaço está ativo.
-2. Verificar conflito de horário.
-3. Criar reserva.
-4. Confirmar transação.
-5. Caso exista conflito → rollback automático.
+### 7. Transação Principal
 
-A operação será controlada via **@Transactional** para garantir integridade.
+Criação de reserva:
 
-**8. Padrões de Projeto Aplicados**
+1. verificar se o espaço está ativo
+2. verificar bloqueios de horário
+3. verificar conflito de horário
+4. criar reserva
+5. confirmar transação
+6. em caso de conflito, realizar rollback automático
+
+A operação é controlada via `@Transactional`.
+
+### 8. Padrões de Projeto Aplicados
+
 - MVC
 - Repository Pattern
 - Dependency Injection
-- Singleton (gerenciado pelo container Spring)
-- Strategy (possível aplicação para regras diferentes entre quadra e quiosque)
+- Singleton gerenciado pelo container Spring
 
-**9. Organização da Dupla**  
+### 9. Organização da Dupla
 
-**Backend:**
-- Modelagem do banco
-- Implementação da API REST
-- Regras de negócio
-- Autenticação JWT
-- Controle transacional
+Backend:
 
-**Frontend:**
-- Desenvolvimento SPA em Angular
-- Telas de cadastro/login
-- Tela de agendamento
-- Consumo da API
-- Guards de autenticação
+- modelagem do banco
+- implementação da API REST
+- regras de negócio
+- autenticação JWT
+- controle transacional
 
-**Ambos:**
-- Testes
-- Documentação
-- Deploy
-- Apresentação
+Frontend:
 
-**10. Planejamento por Entrega**
+- desenvolvimento SPA em Angular
+- telas de cadastro e login
+- tela de agendamento
+- consumo da API
+- guards de autenticação
 
-**N1**
-- Estrutura do projeto
-- Modelagem ER
-- CRUD de Espaço
-- Cadastro/Login
+Ambos:
 
-**N2**
-- Implementação da reserva
-- Validação de conflito
-- Histórico de reservas
+- testes
+- documentação
+- deploy
+- apresentação
 
-**N3**
-- Sistema funcional (≥ 80% do escopo)
-- Melhorias de UX
-- Segurança refinada
-- Deploy
+### 10. Planejamento por Entrega
+
+N1:
+
+- estrutura do projeto
+- modelagem ER
+- CRUD de espaço
+- cadastro e login
+
+N2:
+
+- implementação da reserva
+- validação de conflito
+- histórico de reservas
+
+N3:
+
+- sistema funcional com maior parte do escopo
+- melhorias de UX
+- segurança refinada
+- deploy
