@@ -9,6 +9,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import java.time.LocalTime;
+
 @Entity
 @Table(name = "espacos")
 public class Espaco {
@@ -29,6 +31,12 @@ public class Espaco {
 
     @Column(nullable = false)
     private boolean ativo = true;
+
+    @Column(name = "horario_funcionamento_inicio")
+    private LocalTime horarioFuncionamentoInicio;
+
+    @Column(name = "horario_funcionamento_fim")
+    private LocalTime horarioFuncionamentoFim;
 
     public Long getId() {
         return id;
@@ -68,5 +76,21 @@ public class Espaco {
 
     public void setAtivo(boolean ativo) {
         this.ativo = ativo;
+    }
+
+    public LocalTime getHorarioFuncionamentoInicio() {
+        return horarioFuncionamentoInicio;
+    }
+
+    public void setHorarioFuncionamentoInicio(LocalTime horarioFuncionamentoInicio) {
+        this.horarioFuncionamentoInicio = horarioFuncionamentoInicio;
+    }
+
+    public LocalTime getHorarioFuncionamentoFim() {
+        return horarioFuncionamentoFim;
+    }
+
+    public void setHorarioFuncionamentoFim(LocalTime horarioFuncionamentoFim) {
+        this.horarioFuncionamentoFim = horarioFuncionamentoFim;
     }
 }

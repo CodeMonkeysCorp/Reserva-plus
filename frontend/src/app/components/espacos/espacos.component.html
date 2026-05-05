@@ -1,37 +1,53 @@
 <section class="page-grid">
-  <article class="card-soft panel">
-    <h1 class="panel-title">{{ editingId ? 'Editar espaco' : 'Novo espaco' }}</h1>
-    <p class="panel-subtitle">Cadastre quadras e quiosques para disponibilidade de reservas.</p>
+  <article class="card-soft panel form-panel" #formPanel>
+    <h1 class="panel-title">{{ editingId ? 'Editar espaço' : 'Novo espaço' }}</h1>
+    <p class="panel-subtitle">Cadastre quadras e quiosques com descrição clara e horário de funcionamento configurável.</p>
 
     <div class="alert alert-success py-2" *ngIf="successMessage">{{ successMessage }}</div>
     <div class="alert alert-danger py-2" *ngIf="errorMessage">{{ errorMessage }}</div>
 
-    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-      <div class="mb-3">
-        <label class="form-label" for="nome">Nome</label>
-        <input id="nome" type="text" class="form-control" formControlName="nome" />
+    <form class="form-stack" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div>
+        <label class="form-label" for="nome">Nome do espaço</label>
+        <input id="nome" type="text" class="form-control" formControlName="nome" placeholder="Ex.: Quadra poliesportiva" />
       </div>
 
-      <div class="mb-3">
+      <div>
         <label class="form-label" for="tipo">Tipo</label>
         <select id="tipo" class="form-select" formControlName="tipo">
-          <option *ngFor="let tipo of tipos" [value]="tipo">{{ tipo }}</option>
+          <option *ngFor="let tipo of tipos" [value]="tipo">{{ tipoLabel(tipo) }}</option>
         </select>
       </div>
 
-      <div class="mb-3">
-        <label class="form-label" for="descricao">Descricao</label>
-        <textarea id="descricao" class="form-control" rows="3" formControlName="descricao"></textarea>
+      <div class="time-row">
+        <div>
+          <label class="form-label" for="horarioFuncionamentoInicio">Abre às</label>
+          <input id="horarioFuncionamentoInicio" type="time" class="form-control" formControlName="horarioFuncionamentoInicio" step="3600" />
+        </div>
+
+        <div>
+          <label class="form-label" for="horarioFuncionamentoFim">Fecha às</label>
+          <input id="horarioFuncionamentoFim" type="time" class="form-control" formControlName="horarioFuncionamentoFim" step="3600" />
+        </div>
       </div>
 
-      <div class="form-check mb-3">
-        <input id="ativo" type="checkbox" class="form-check-input" formControlName="ativo" />
-        <label class="form-check-label" for="ativo">Espaco ativo para reservas</label>
+      <div>
+        <div class="field-meta">
+          <label class="form-label mb-0" for="descricao">Descrição</label>
+          <span>{{ descricaoLength }}/500</span>
+        </div>
+        <textarea
+          id="descricao"
+          class="form-control"
+          rows="5"
+          formControlName="descricao"
+          placeholder="Explique localização, capacidade, regras de uso ou estrutura disponível."
+        ></textarea>
       </div>
 
       <div class="form-actions">
         <button type="submit" class="btn btn-brand text-white" [disabled]="saving">
-          {{ saving ? 'Salvando...' : (editingId ? 'Atualizar' : 'Criar espaco') }}
+          {{ saving ? 'Salvando...' : (editingId ? 'Atualizar espaço' : 'Criar espaço') }}
         </button>
         <button
           type="button"
@@ -40,24 +56,39 @@
           [disabled]="saving"
           (click)="cancelEdit()"
         >
-          Cancelar edicao
+          Cancelar edição
         </button>
       </div>
     </form>
   </article>
 
-  <article class="card-soft panel">
-    <h2 class="panel-title">Espacos cadastrados</h2>
-    <div *ngIf="loading" class="text-muted">Carregando espacos...</div>
+  <article class="card-soft panel list-panel">
+    <h2 class="panel-title">Espaços cadastrados</h2>
+    <p class="panel-subtitle">Gerencie os ambientes e ajuste o horário de funcionamento de cada um.</p>
+    <div *ngIf="loading" class="text-muted">Carregando espaços...</div>
 
-    <div class="table-responsive" *ngIf="!loading">
+    <div class="inline-action inline-danger" *ngIf="pendingDelete as espaco">
+      <div>
+        <strong>Excluir espaço</strong>
+        <p class="mb-0">Você está prestes a remover <strong>{{ espaco.nome }}</strong>. Essa ação não pode ser desfeita.</p>
+      </div>
+
+      <div class="inline-action-buttons">
+        <button type="button" class="btn btn-outline-secondary" [disabled]="saving" (click)="cancelRemove()">Voltar</button>
+        <button type="button" class="btn btn-danger" [disabled]="saving" (click)="confirmRemove()">
+          {{ saving ? 'Excluindo...' : 'Confirmar exclusão' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="table-shell table-responsive" *ngIf="!loading">
       <table class="table align-middle">
         <thead>
           <tr>
             <th>Nome</th>
             <th>Tipo</th>
             <th>Status</th>
-            <th class="text-end">Acoes</th>
+            <th class="text-end">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -65,8 +96,11 @@
             <td>
               <strong>{{ espaco.nome }}</strong>
               <div class="small text-muted" *ngIf="espaco.descricao">{{ espaco.descricao }}</div>
+              <div class="small text-muted">
+                Funcionamento: {{ formatTime(espaco.horarioFuncionamentoInicio) }} - {{ formatTime(espaco.horarioFuncionamentoFim) }}
+              </div>
             </td>
-            <td>{{ espaco.tipo }}</td>
+            <td>{{ tipoLabel(espaco.tipo) }}</td>
             <td>
               <span class="badge" [class.bg-success]="espaco.ativo" [class.bg-secondary]="!espaco.ativo">
                 {{ espaco.ativo ? 'ATIVO' : 'INATIVO' }}
@@ -74,13 +108,13 @@
             </td>
             <td class="text-end">
               <button type="button" class="btn btn-sm btn-outline-primary me-2" (click)="edit(espaco)">Editar</button>
-              <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="saving" (click)="remove(espaco)">
+              <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="saving" (click)="requestRemove(espaco)">
                 Excluir
               </button>
             </td>
           </tr>
           <tr *ngIf="espacos.length === 0">
-            <td colspan="4" class="text-center text-muted py-3">Nenhum espaco cadastrado.</td>
+            <td colspan="4" class="text-center text-muted py-3">Nenhum espaço cadastrado.</td>
           </tr>
         </tbody>
       </table>

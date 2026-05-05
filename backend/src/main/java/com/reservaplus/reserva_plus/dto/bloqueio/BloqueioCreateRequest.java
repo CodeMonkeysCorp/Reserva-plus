@@ -9,21 +9,26 @@ import java.time.LocalTime;
 
 public class BloqueioCreateRequest {
 
-    @NotNull
+    @NotNull(message = "Selecione o espaco do bloqueio.")
     private Long espacoId;
 
-    @NotNull
-    @FutureOrPresent
+    @NotNull(message = "Informe a data do bloqueio.")
+    @FutureOrPresent(message = "A data do bloqueio deve ser hoje ou futura.")
     private LocalDate data;
 
-    @NotNull
+    @NotNull(message = "Informe o horario de inicio.")
     private LocalTime horarioInicio;
 
-    @NotNull
+    @NotNull(message = "Informe o horario de fim.")
     private LocalTime horarioFim;
 
-    @Size(max = 300)
+    @Size(max = 300, message = "O motivo deve ter no maximo 300 caracteres.")
     private String motivo;
+
+    private Boolean recorrenteSemanal;
+
+    @FutureOrPresent(message = "A data final da recorrencia deve ser hoje ou futura.")
+    private LocalDate dataFimRecorrencia;
 
     public Long getEspacoId() {
         return espacoId;
@@ -63,5 +68,21 @@ public class BloqueioCreateRequest {
 
     public void setMotivo(String motivo) {
         this.motivo = motivo;
+    }
+
+    public Boolean getRecorrenteSemanal() {
+        return recorrenteSemanal;
+    }
+
+    public void setRecorrenteSemanal(Boolean recorrenteSemanal) {
+        this.recorrenteSemanal = recorrenteSemanal;
+    }
+
+    public LocalDate getDataFimRecorrencia() {
+        return dataFimRecorrencia;
+    }
+
+    public void setDataFimRecorrencia(LocalDate dataFimRecorrencia) {
+        this.dataFimRecorrencia = dataFimRecorrencia;
     }
 }

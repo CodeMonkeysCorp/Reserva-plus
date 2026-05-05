@@ -12,6 +12,7 @@ public class BloqueioResponse {
     private LocalTime horarioInicio;
     private LocalTime horarioFim;
     private String motivo;
+    private String serieRecorrenciaId;
 
     public Long getId() {
         return id;
@@ -67,5 +68,13 @@ public class BloqueioResponse {
 
     public void setMotivo(String motivo) {
         this.motivo = motivo;
+    }
+
+    public String getSerieRecorrenciaId() {
+        return serieRecorrenciaId;
+    }
+
+    public void setSerieRecorrenciaId(String serieRecorrenciaId) {
+        this.serieRecorrenciaId = serieRecorrenciaId;
     }
 }

@@ -29,6 +29,8 @@ export class RegisterComponent {
 
   loading = false;
   errorMessage = '';
+  showSenha = false;
+  showConfirmarSenha = false;
 
   constructor() {
     if (this.authService.isAuthenticated()) {
@@ -41,11 +43,13 @@ export class RegisterComponent {
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.errorMessage = 'Revise os campos destacados para continuar.';
       return;
     }
 
     if (this.form.controls.senha.value !== this.form.controls.confirmarSenha.value) {
-      this.errorMessage = 'As senhas nao conferem.';
+      this.form.controls.confirmarSenha.markAsTouched();
+      this.errorMessage = 'As senhas não conferem.';
       return;
     }
 
@@ -64,8 +68,25 @@ export class RegisterComponent {
           void this.router.navigate(['/home']);
         },
         error: (error: unknown) => {
-          this.errorMessage = this.apiErrorService.toMessage(error, 'Nao foi possivel concluir o cadastro.');
+          this.errorMessage = this.apiErrorService.toMessage(error, 'Não foi possível concluir o cadastro.');
         }
       });
+  }
+
+  toggleSenha(): void {
+    this.showSenha = !this.showSenha;
+  }
+
+  toggleConfirmarSenha(): void {
+    this.showConfirmarSenha = !this.showConfirmarSenha;
+  }
+
+  get senhasNaoConferem(): boolean {
+    return (
+      this.form.controls.confirmarSenha.touched &&
+      this.form.controls.senha.value.length > 0 &&
+      this.form.controls.confirmarSenha.value.length > 0 &&
+      this.form.controls.senha.value !== this.form.controls.confirmarSenha.value
+    );
   }
 }

@@ -1,29 +1,100 @@
 <section class="auth-page">
   <div class="card-soft auth-card">
     <h1 class="auth-title">Criar conta</h1>
-    <p class="auth-subtitle">Cadastre-se para reservar espacos comunitarios.</p>
+    <p class="auth-subtitle">Cadastre-se para reservar espaços comunitários e acompanhar seus horários.</p>
 
     <div class="alert alert-danger py-2" *ngIf="errorMessage">{{ errorMessage }}</div>
 
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <div class="mb-3">
         <label class="form-label" for="nome">Nome</label>
-        <input id="nome" type="text" class="form-control" formControlName="nome" />
+        <input id="nome" type="text" class="form-control" formControlName="nome" placeholder="Seu nome completo" />
+        <div class="text-danger mt-1 small" *ngIf="form.controls.nome.touched && form.controls.nome.errors?.['required']">
+          Informe seu nome.
+        </div>
+        <div class="text-danger mt-1 small" *ngIf="form.controls.nome.touched && form.controls.nome.errors?.['minlength']">
+          O nome precisa ter pelo menos 3 caracteres.
+        </div>
       </div>
 
       <div class="mb-3">
         <label class="form-label" for="email">E-mail</label>
-        <input id="email" type="email" class="form-control" formControlName="email" />
+        <input id="email" type="email" class="form-control" formControlName="email" placeholder="voce@email.com" />
+        <div class="text-danger mt-1 small" *ngIf="form.controls.email.touched && form.controls.email.errors?.['required']">
+          Informe seu e-mail.
+        </div>
+        <div class="text-danger mt-1 small" *ngIf="form.controls.email.touched && form.controls.email.errors?.['email']">
+          Informe um e-mail válido.
+        </div>
       </div>
 
       <div class="mb-3">
         <label class="form-label" for="senha">Senha</label>
-        <input id="senha" type="password" class="form-control" formControlName="senha" />
+        <div class="password-field">
+          <input
+            id="senha"
+            [type]="showSenha ? 'text' : 'password'"
+            class="form-control"
+            formControlName="senha"
+            autocomplete="new-password"
+            placeholder="Crie uma senha"
+          />
+          <button type="button" class="password-toggle" (click)="toggleSenha()" [attr.aria-label]="showSenha ? 'Ocultar senha' : 'Mostrar senha'">
+            <svg *ngIf="!showSenha" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12Z"></path>
+              <circle cx="12" cy="12" r="3.2"></circle>
+            </svg>
+            <svg *ngIf="showSenha" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 3l18 18"></path>
+              <path d="M10.6 5.2A11.3 11.3 0 0 1 12 5c6.4 0 10 7 10 7a19.3 19.3 0 0 1-4.2 4.8"></path>
+              <path d="M6.6 6.6A19 19 0 0 0 2 12s3.6 7 10 7a9.9 9.9 0 0 0 4.3-.9"></path>
+              <path d="M9.9 9.9A3 3 0 0 0 9 12a3 3 0 0 0 4.8 2.4"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="text-danger mt-1 small" *ngIf="form.controls.senha.touched && form.controls.senha.errors?.['required']">
+          Informe uma senha.
+        </div>
+        <div class="text-danger mt-1 small" *ngIf="form.controls.senha.touched && form.controls.senha.errors?.['minlength']">
+          A senha precisa ter pelo menos 6 caracteres.
+        </div>
       </div>
 
       <div class="mb-3">
         <label class="form-label" for="confirmarSenha">Confirmar senha</label>
-        <input id="confirmarSenha" type="password" class="form-control" formControlName="confirmarSenha" />
+        <div class="password-field">
+          <input
+            id="confirmarSenha"
+            [type]="showConfirmarSenha ? 'text' : 'password'"
+            class="form-control"
+            formControlName="confirmarSenha"
+            autocomplete="new-password"
+            placeholder="Repita a senha"
+          />
+          <button
+            type="button"
+            class="password-toggle"
+            (click)="toggleConfirmarSenha()"
+            [attr.aria-label]="showConfirmarSenha ? 'Ocultar confirmação de senha' : 'Mostrar confirmação de senha'"
+          >
+            <svg *ngIf="!showConfirmarSenha" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12Z"></path>
+              <circle cx="12" cy="12" r="3.2"></circle>
+            </svg>
+            <svg *ngIf="showConfirmarSenha" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 3l18 18"></path>
+              <path d="M10.6 5.2A11.3 11.3 0 0 1 12 5c6.4 0 10 7 10 7a19.3 19.3 0 0 1-4.2 4.8"></path>
+              <path d="M6.6 6.6A19 19 0 0 0 2 12s3.6 7 10 7a9.9 9.9 0 0 0 4.3-.9"></path>
+              <path d="M9.9 9.9A3 3 0 0 0 9 12a3 3 0 0 0 4.8 2.4"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="text-danger mt-1 small" *ngIf="form.controls.confirmarSenha.touched && form.controls.confirmarSenha.errors?.['required']">
+          Confirme sua senha.
+        </div>
+        <div class="text-danger mt-1 small" *ngIf="senhasNaoConferem">
+          As senhas não conferem.
+        </div>
       </div>
 
       <button type="submit" class="btn btn-brand text-white w-100" [disabled]="loading">
@@ -32,7 +103,7 @@
     </form>
 
     <div class="auth-footer">
-      <span>Ja possui conta?</span>
+      <span>Já possui conta?</span>
       <a routerLink="/login">Entrar</a>
     </div>
   </div>

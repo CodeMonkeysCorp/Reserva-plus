@@ -8,17 +8,17 @@ import java.time.LocalTime;
 
 public class ReservaCreateRequest {
 
-    @NotNull
+    @NotNull(message = "Selecione o espaço da reserva.")
     private Long espacoId;
 
-    @NotNull
-    @FutureOrPresent
+    @NotNull(message = "Informe a data da reserva.")
+    @FutureOrPresent(message = "A data da reserva deve ser hoje ou futura.")
     private LocalDate data;
 
-    @NotNull
+    @NotNull(message = "Informe o horário de início.")
     private LocalTime horarioInicio;
 
-    @NotNull
+    @NotNull(message = "Informe o horário de fim.")
     private LocalTime horarioFim;
 
     public Long getEspacoId() {

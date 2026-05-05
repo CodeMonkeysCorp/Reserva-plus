@@ -1,9 +1,7 @@
 <section class="dashboard">
   <header class="card-soft hero-card">
-    <h1>Ola, {{ nomeUsuario }}.</h1>
-    <p>
-      Controle suas reservas, acompanhe historico e organize os espacos compartilhados em um unico painel.
-    </p>
+    <h1>Olá, {{ nomeUsuario }}.</h1>
+    <p>{{ heroDescription }}</p>
   </header>
 
   <div class="alert alert-danger" *ngIf="errorMessage">{{ errorMessage }}</div>
@@ -12,9 +10,9 @@
     Carregando indicadores...
   </div>
 
-  <div *ngIf="!loading" class="stats-grid">
-    <article class="card-soft stat-card">
-      <span class="stat-label">Espacos cadastrados</span>
+  <div *ngIf="!loading" class="stats-grid" [class.user-grid]="!isAdmin">
+    <article class="card-soft stat-card" *ngIf="isAdmin">
+      <span class="stat-label">Espaços cadastrados</span>
       <strong class="stat-value">{{ totalEspacos }}</strong>
     </article>
 
@@ -30,12 +28,12 @@
   </div>
 
   <section class="card-soft next-card" *ngIf="!loading">
-    <h2>Proxima reserva</h2>
+    <h2>Próxima reserva</h2>
     <div *ngIf="proximaReserva; else semReserva">
       <p class="mb-1"><strong>{{ proximaReserva.espacoNome }}</strong></p>
       <p class="mb-0">
         {{ proximaReserva.data | date: 'dd/MM/yyyy' }} das
-        {{ proximaReserva.horarioInicio | slice:0:5 }} as {{ proximaReserva.horarioFim | slice:0:5 }}
+        {{ proximaReserva.horarioInicio | slice:0:5 }} às {{ proximaReserva.horarioFim | slice:0:5 }}
       </p>
     </div>
     <ng-template #semReserva>
@@ -43,12 +41,4 @@
     </ng-template>
   </section>
 
-  <section class="card-soft actions-card">
-    <h2>Atalhos</h2>
-    <div class="actions-grid">
-      <a class="btn btn-brand text-white" routerLink="/reservas">Gerenciar reservas</a>
-      <a *ngIf="isAdmin" class="btn btn-outline-success" routerLink="/espacos">Gerenciar espacos</a>
-      <a *ngIf="isAdmin" class="btn btn-outline-primary" routerLink="/bloqueios">Controlar bloqueios</a>
-    </div>
-  </section>
 </section>

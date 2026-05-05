@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { Espaco, EspacoPayload, EspacoTipo } from '../../core/models';
@@ -14,6 +14,8 @@ import { EspacosService } from '../../core/services/espacos.service';
   styleUrl: './espacos.component.css'
 })
 export class EspacosComponent implements OnInit {
+  @ViewChild('formPanel') private readonly formPanel?: ElementRef<HTMLElement>;
+
   private readonly fb = inject(FormBuilder);
   private readonly espacosService = inject(EspacosService);
   private readonly apiErrorService = inject(ApiErrorService);
@@ -23,7 +25,8 @@ export class EspacosComponent implements OnInit {
     nome: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
     tipo: ['QUADRA' as EspacoTipo, [Validators.required]],
     descricao: ['', [Validators.maxLength(500)]],
-    ativo: [true]
+    horarioFuncionamentoInicio: ['06:00', [Validators.required]],
+    horarioFuncionamentoFim: ['23:00', [Validators.required]]
   });
 
   espacos: Espaco[] = [];
@@ -31,6 +34,7 @@ export class EspacosComponent implements OnInit {
   saving = false;
 
   editingId: number | null = null;
+  pendingDelete: Espaco | null = null;
   successMessage = '';
   errorMessage = '';
 
@@ -47,11 +51,26 @@ export class EspacosComponent implements OnInit {
       return;
     }
 
+    const horarioInicio = this.normalizeTime(this.form.controls.horarioFuncionamentoInicio.value);
+    const horarioFim = this.normalizeTime(this.form.controls.horarioFuncionamentoFim.value);
+
+    if (!this.isHoraCheia(horarioInicio) || !this.isHoraCheia(horarioFim)) {
+      this.errorMessage = 'Defina o funcionamento apenas em horas cheias.';
+      return;
+    }
+
+    if (horarioFim <= horarioInicio) {
+      this.errorMessage = 'O horário final de funcionamento precisa ser maior que o inicial.';
+      return;
+    }
+
     const payload: EspacoPayload = {
       nome: this.form.controls.nome.value.trim(),
       tipo: this.form.controls.tipo.value,
       descricao: this.form.controls.descricao.value.trim() || undefined,
-      ativo: this.form.controls.ativo.value
+      ativo: true,
+      horarioFuncionamentoInicio: horarioInicio,
+      horarioFuncionamentoFim: horarioFim
     };
 
     this.saving = true;
@@ -64,26 +83,29 @@ export class EspacosComponent implements OnInit {
       .pipe(finalize(() => (this.saving = false)))
       .subscribe({
         next: () => {
-          this.successMessage = this.editingId === null ? 'Espaco criado com sucesso.' : 'Espaco atualizado com sucesso.';
+          this.successMessage = this.editingId === null ? 'Espaço criado com sucesso.' : 'Espaço atualizado com sucesso.';
           this.cancelEdit();
           this.loadEspacos();
         },
         error: (error: unknown) => {
-          this.errorMessage = this.apiErrorService.toMessage(error, 'Falha ao salvar espaco.');
+          this.errorMessage = this.apiErrorService.toMessage(error, 'Falha ao salvar espaço.');
         }
       });
   }
 
   edit(espaco: Espaco): void {
     this.editingId = espaco.id;
+    this.pendingDelete = null;
     this.successMessage = '';
     this.errorMessage = '';
     this.form.patchValue({
       nome: espaco.nome,
       tipo: espaco.tipo,
       descricao: espaco.descricao ?? '',
-      ativo: espaco.ativo
+      horarioFuncionamentoInicio: this.normalizeTime(espaco.horarioFuncionamentoInicio),
+      horarioFuncionamentoFim: this.normalizeTime(espaco.horarioFuncionamentoFim)
     });
+    this.scrollFormIntoView();
   }
 
   cancelEdit(): void {
@@ -92,31 +114,62 @@ export class EspacosComponent implements OnInit {
       nome: '',
       tipo: 'QUADRA',
       descricao: '',
-      ativo: true
+      horarioFuncionamentoInicio: '06:00',
+      horarioFuncionamentoFim: '23:00'
     });
   }
 
-  remove(espaco: Espaco): void {
+  requestRemove(espaco: Espaco): void {
     this.successMessage = '';
     this.errorMessage = '';
+    this.pendingDelete = espaco;
+  }
 
-    if (!confirm(`Deseja remover o espaco "${espaco.nome}"?`)) {
+  cancelRemove(): void {
+    if (this.saving) {
       return;
     }
 
+    this.pendingDelete = null;
+  }
+
+  confirmRemove(): void {
+    const espaco = this.pendingDelete;
+    if (!espaco) {
+      return;
+    }
+
+    this.successMessage = '';
+    this.errorMessage = '';
     this.saving = true;
     this.espacosService
       .delete(espaco.id)
       .pipe(finalize(() => (this.saving = false)))
       .subscribe({
         next: () => {
-          this.successMessage = 'Espaco removido com sucesso.';
+          this.successMessage = 'Espaço removido com sucesso.';
+          this.pendingDelete = null;
+          if (this.editingId === espaco.id) {
+            this.cancelEdit();
+          }
           this.loadEspacos();
         },
         error: (error: unknown) => {
-          this.errorMessage = this.apiErrorService.toMessage(error, 'Falha ao remover espaco.');
+          this.errorMessage = this.apiErrorService.toMessage(error, 'Falha ao remover espaço.');
         }
       });
+  }
+
+  get descricaoLength(): number {
+    return this.form.controls.descricao.value.length;
+  }
+
+  tipoLabel(tipo: EspacoTipo): string {
+    return tipo === 'QUADRA' ? 'Quadra' : 'Quiosque';
+  }
+
+  formatTime(value: string | null | undefined): string {
+    return this.normalizeTime(value);
   }
 
   private loadEspacos(): void {
@@ -131,8 +184,23 @@ export class EspacosComponent implements OnInit {
           this.espacos = espacos.sort((a, b) => a.nome.localeCompare(b.nome));
         },
         error: (error: unknown) => {
-          this.errorMessage = this.apiErrorService.toMessage(error, 'Falha ao carregar espacos.');
+          this.errorMessage = this.apiErrorService.toMessage(error, 'Falha ao carregar espaços.');
         }
       });
+  }
+
+  private normalizeTime(value: string | null | undefined): string {
+    return (value ?? '').slice(0, 5);
+  }
+
+  private isHoraCheia(value: string): boolean {
+    return value.endsWith(':00');
+  }
+
+  private scrollFormIntoView(): void {
+    this.formPanel?.nativeElement.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
   }
 }

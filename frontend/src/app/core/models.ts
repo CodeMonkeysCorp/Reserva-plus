@@ -1,6 +1,6 @@
 export type UserRole = 'ADMIN' | 'USER';
 export type EspacoTipo = 'QUADRA' | 'QUIOSQUE';
-export type ReservaStatus = 'ATIVA' | 'CANCELADA';
+export type ReservaStatus = 'ATIVA' | 'CONCLUIDA' | 'CANCELADA';
 
 export interface LoginPayload {
   email: string;
@@ -21,12 +21,26 @@ export interface AuthResponse {
   role: UserRole;
 }
 
+export interface AdminUser {
+  id: number;
+  nome: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface AdminUserUpdatePayload {
+  role: UserRole;
+  senha?: string;
+}
+
 export interface Espaco {
   id: number;
   nome: string;
   tipo: EspacoTipo;
   descricao?: string;
   ativo: boolean;
+  horarioFuncionamentoInicio: string;
+  horarioFuncionamentoFim: string;
 }
 
 export interface EspacoPayload {
@@ -34,12 +48,14 @@ export interface EspacoPayload {
   tipo: EspacoTipo;
   descricao?: string;
   ativo: boolean;
+  horarioFuncionamentoInicio: string;
+  horarioFuncionamentoFim: string;
 }
 
 export interface Reserva {
   id: number;
-  usuarioId: number;
-  usuarioNome: string;
+  usuarioId: number | null;
+  usuarioNome: string | null;
   espacoId: number;
   espacoNome: string;
   data: string;
@@ -56,6 +72,11 @@ export interface ReservaCreatePayload {
   horarioFim: string;
 }
 
+export interface AgendaDia {
+  reservasAtivas: Reserva[];
+  bloqueios: Bloqueio[];
+}
+
 export interface Bloqueio {
   id: number;
   espacoId: number;
@@ -64,6 +85,7 @@ export interface Bloqueio {
   horarioInicio: string;
   horarioFim: string;
   motivo?: string;
+  serieRecorrenciaId?: string | null;
 }
 
 export interface BloqueioPayload {
@@ -72,6 +94,8 @@ export interface BloqueioPayload {
   horarioInicio: string;
   horarioFim: string;
   motivo?: string;
+  recorrenteSemanal?: boolean;
+  dataFimRecorrencia?: string;
 }
 
 export interface ApiErrorResponse {

@@ -1,92 +1,120 @@
 <section class="reserva-grid">
-  <article class="card-soft panel">
-    <h1 class="panel-title">Nova reserva</h1>
-    <p class="panel-subtitle">Selecione espaco, data e horario para registrar a reserva.</p>
+  <article class="card-soft panel selector-panel">
+    <h1 class="panel-title">Fazer reserva</h1>
+    <p class="panel-subtitle">Escolha o tipo, o espaço e uma data entre hoje e os próximos {{ maxBookingWindowDays }} dias.</p>
 
     <div class="alert alert-success py-2" *ngIf="successMessage">{{ successMessage }}</div>
     <div class="alert alert-danger py-2" *ngIf="errorMessage">{{ errorMessage }}</div>
 
-    <div *ngIf="loading" class="text-muted">Carregando espacos...</div>
+    <div *ngIf="loading" class="text-muted">Carregando espaços...</div>
 
-    <form *ngIf="!loading" [formGroup]="form" (ngSubmit)="criarReserva()" novalidate>
-      <div class="mb-3">
-        <label class="form-label" for="espacoId">Espaco</label>
-        <select id="espacoId" class="form-select" formControlName="espacoId">
-          <option [value]="0" disabled>Selecione um espaco</option>
-          <option *ngFor="let espaco of espacos" [value]="espaco.id" [disabled]="!espaco.ativo">
-            {{ espaco.nome }} ({{ espaco.tipo }}) {{ espaco.ativo ? '' : '- INATIVO' }}
-          </option>
-        </select>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label" for="data">Data</label>
-        <input id="data" type="date" class="form-control" formControlName="data" />
-      </div>
-
-      <div class="time-row">
-        <div class="mb-3">
-          <label class="form-label" for="inicio">Inicio</label>
-          <input id="inicio" type="time" class="form-control" formControlName="horarioInicio" />
+    <form *ngIf="!loading" class="form-stack" [formGroup]="form" (ngSubmit)="criarReserva()" novalidate>
+      <div class="filters-grid">
+        <div class="filters-field">
+          <label class="form-label" for="tipo">Tipo de espaço</label>
+          <select id="tipo" class="form-select" formControlName="tipo">
+            <option *ngFor="let tipo of tiposFiltro" [value]="tipo.value">{{ tipo.label }}</option>
+          </select>
         </div>
-        <div class="mb-3">
-          <label class="form-label" for="fim">Fim</label>
-          <input id="fim" type="time" class="form-control" formControlName="horarioFim" />
+
+        <div class="filters-field">
+          <label class="form-label" for="espacoId">Espaço</label>
+          <select id="espacoId" class="form-select" formControlName="espacoId" [disabled]="!hasFilteredEspacos">
+            <option [value]="0" disabled>{{ hasFilteredEspacos ? 'Selecione um espaço' : 'Nenhum espaço disponível' }}</option>
+            <option *ngFor="let espaco of filteredEspacos" [value]="espaco.id" [disabled]="!espaco.ativo">
+              {{ espaco.nome }} ({{ tipoLabel(espaco.tipo) }}) {{ espaco.ativo ? '' : '- INATIVO' }}
+            </option>
+          </select>
+          <div class="helper-note" *ngIf="!hasFilteredEspacos">Nenhum espaço encontrado para o tipo selecionado.</div>
+        </div>
+
+        <div class="filters-field">
+          <label class="form-label" for="data">Data</label>
+          <input id="data" type="date" class="form-control" formControlName="data" [min]="minDate" [max]="maxDate" />
         </div>
       </div>
 
-      <button type="submit" class="btn btn-brand text-white" [disabled]="creating">
-        {{ creating ? 'Salvando...' : 'Criar reserva' }}
-      </button>
+      <div class="selection-preview">
+        <div class="selection-preview-head">
+          <div>
+            <span class="preview-label">Horários selecionados</span>
+            <strong>{{ selectedIntervalLabel }}</strong>
+          </div>
+          <span class="selection-count" *ngIf="selectedSlots.length">{{ selectedSlots.length }} bloco(s)</span>
+        </div>
+
+        <p class="selection-meta">
+          {{ selectedEspaco?.nome || 'Escolha um espaço' }}
+          <span *ngIf="selectedEspaco">({{ selectedEspacoTipoLabel }})</span>
+          <span class="preview-separator">|</span>
+          {{ form.controls.data.value | date: 'dd/MM/yyyy' }}
+        </p>
+
+        <div *ngIf="selectedSlots.length; else semFaixaSelecionada" class="selected-slot-list">
+          <span class="selected-slot-pill" *ngFor="let slot of selectedSlots">{{ slot.inicio }} - {{ slot.fim }}</span>
+        </div>
+
+        <ng-template #semFaixaSelecionada>
+          <p class="helper-note mb-0">Selecione blocos livres consecutivos para montar a reserva.</p>
+        </ng-template>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-brand text-white" [disabled]="!canCreateReservation">
+          {{ creating ? 'Salvando...' : 'Fazer reserva' }}
+        </button>
+      </div>
     </form>
   </article>
 
-  <article class="card-soft panel">
-    <h2 class="panel-title">Historico de reservas</h2>
-    <p class="panel-subtitle">
-      {{ isAdmin ? 'Como ADMIN voce visualiza todas as reservas.' : 'Visualize e gerencie suas reservas.' }}
-    </p>
+  <article class="card-soft panel agenda-panel">
+    <h2 class="panel-title">Agenda de reservas</h2>
+    <p class="panel-subtitle">Selecione horários livres na grade. Reservas e bloqueios aparecem sinalizados.</p>
 
-    <div class="table-responsive">
-      <table class="table align-middle">
-        <thead>
-          <tr>
-            <th>Espaco</th>
-            <th>Data</th>
-            <th>Horario</th>
-            <th>Status</th>
-            <th>Usuario</th>
-            <th class="text-end">Acao</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let reserva of historico">
-            <td>{{ reserva.espacoNome }}</td>
-            <td>{{ reserva.data | date: 'dd/MM/yyyy' }}</td>
-            <td>{{ reserva.horarioInicio | slice:0:5 }} - {{ reserva.horarioFim | slice:0:5 }}</td>
-            <td>
-              <span class="badge" [class.bg-success]="reserva.status === 'ATIVA'" [class.bg-secondary]="reserva.status === 'CANCELADA'">
-                {{ reserva.status }}
-              </span>
-            </td>
-            <td>{{ reserva.usuarioNome }}</td>
-            <td class="text-end">
-              <button
-                *ngIf="reserva.status === 'ATIVA'"
-                type="button"
-                class="btn btn-sm btn-outline-danger"
-                [disabled]="cancelling"
-                (click)="cancelarReserva(reserva)"
-              >
-                Cancelar
-              </button>
-            </td>
-          </tr>
-          <tr *ngIf="historico.length === 0">
-            <td colspan="6" class="text-center text-muted py-3">Nenhuma reserva encontrada.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <section class="agenda-shell">
+      <div class="agenda-header">
+        <div>
+          <h3>{{ selectedEspaco?.nome || 'Selecione um espaço' }}</h3>
+          <p class="mb-0">
+            <span *ngIf="selectedEspaco">{{ selectedEspacoTipoLabel }} | </span>
+            {{ form.controls.data.value | date: 'dd/MM/yyyy' }}
+          </p>
+          <p class="mb-0" *ngIf="selectedEspaco">Funcionamento: {{ selectedEspacoHorarioLabel }}</p>
+        </div>
+
+        <div class="agenda-legend">
+          <span class="legend-item legend-free">Livre</span>
+          <span class="legend-item legend-past">Concluído</span>
+          <span class="legend-item legend-selected">Selecionado</span>
+          <span class="legend-item legend-reserved">Reservado</span>
+          <span class="legend-item legend-blocked">Bloqueado</span>
+        </div>
+      </div>
+
+      <div *ngIf="loadingAgenda" class="text-muted">Carregando horários do dia...</div>
+
+      <div *ngIf="!loadingAgenda && !selectedEspaco" class="agenda-empty">
+        Selecione um espaço para visualizar a agenda do dia.
+      </div>
+
+      <div *ngIf="!loadingAgenda && selectedEspaco && agendaSlots.length > 0" class="slot-grid">
+        <button
+          type="button"
+          class="slot-card"
+          *ngFor="let slot of agendaSlots"
+          [class.is-free]="slot.status === 'LIVRE' && !isSlotSelected(slot)"
+          [class.is-past]="slot.status === 'ENCERRADO'"
+          [class.is-selected]="isSlotSelected(slot)"
+          [class.is-reserved]="slot.status === 'RESERVADO'"
+          [class.is-blocked]="slot.status === 'BLOQUEADO'"
+          [disabled]="slot.status !== 'LIVRE'"
+          (click)="toggleSlotSelection(slot)"
+        >
+          <span class="slot-time">{{ slot.inicio }} - {{ slot.fim }}</span>
+          <span class="slot-status">{{ slotStatusLabel(slot) }}</span>
+          <small class="slot-detail" *ngIf="slot.detalhe">{{ slot.detalhe }}</small>
+        </button>
+      </div>
+    </section>
   </article>
 </section>

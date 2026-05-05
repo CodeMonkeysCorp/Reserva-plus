@@ -1,0 +1,155 @@
+<section class="history-page">
+  <article class="card-soft page-card">
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">{{ pageTitle }}</h1>
+        <p class="page-subtitle">{{ pageSubtitle }}</p>
+      </div>
+    </div>
+  </article>
+
+  <div class="alert alert-success" *ngIf="successMessage">{{ successMessage }}</div>
+  <div class="alert alert-danger" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <article class="card-soft filters-card">
+    <div class="filters-head">
+      <h2>Filtros</h2>
+      <button type="button" class="btn btn-sm btn-outline-secondary" (click)="clearFilters()" [disabled]="!hasActiveFilters">
+        Limpar filtros
+      </button>
+    </div>
+
+    <form class="filters-grid" [formGroup]="form">
+      <div>
+        <label class="form-label" for="filtroTipo">Tipo de espaço</label>
+        <select id="filtroTipo" class="form-select" formControlName="tipo">
+          <option *ngFor="let tipo of tiposFiltro" [value]="tipo.value">{{ tipo.label }}</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="form-label" for="filtroEspaco">Espaço</label>
+        <select id="filtroEspaco" class="form-select" formControlName="espacoId">
+          <option [value]="0">Todos os espaços</option>
+          <option *ngFor="let espaco of filteredEspacos" [value]="espaco.id">
+            {{ espaco.nome }}
+          </option>
+        </select>
+      </div>
+
+      <div>
+        <label class="form-label" for="filtroStatus">Status</label>
+        <select id="filtroStatus" class="form-select" formControlName="status">
+          <option *ngFor="let status of statusFiltro" [value]="status.value">{{ status.label }}</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="form-label" for="filtroData">Data</label>
+        <input id="filtroData" type="date" class="form-control" formControlName="data" />
+      </div>
+    </form>
+  </article>
+
+  <article class="card-soft list-card">
+    <div class="results-head">
+      <div>
+        <h2>{{ pageTitle }}</h2>
+      </div>
+
+      <span class="results-count">{{ resultsLabel }}</span>
+    </div>
+
+    <div class="inline-cancel-card" *ngIf="pendingCancel as reserva">
+      <div class="inline-cancel-head">
+        <div>
+          <h3>Confirmar cancelamento</h3>
+          <p class="mb-0">
+            Você está prestes a cancelar a reserva de <strong>{{ reserva.espacoNome }}</strong>.
+          </p>
+        </div>
+      </div>
+
+      <dl class="inline-cancel-summary">
+        <div>
+          <dt>Data</dt>
+          <dd>{{ formatDateLabel(reserva.data) }}</dd>
+        </div>
+        <div>
+          <dt>Horário</dt>
+          <dd>{{ reserva.horarioInicio | slice:0:5 }} - {{ reserva.horarioFim | slice:0:5 }}</dd>
+        </div>
+        <div *ngIf="isAdminView && reserva.usuarioNome">
+          <dt>Usuário</dt>
+          <dd>{{ reserva.usuarioNome }}</dd>
+        </div>
+      </dl>
+
+      <div class="inline-cancel-actions">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeCancelModal()" [disabled]="!canCloseModal">
+          Voltar
+        </button>
+        <button type="button" class="btn btn-danger" (click)="confirmCancel()" [disabled]="cancelling">
+          {{ cancelling ? 'Cancelando...' : 'Confirmar cancelamento' }}
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="loading" class="loading-state">Carregando reservas...</div>
+
+    <ng-container *ngIf="!loading">
+      <div class="table-shell table-responsive" *ngIf="hasReservations; else emptyState">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>Espaço</th>
+              <th>Tipo</th>
+              <th>Data</th>
+              <th>Horário</th>
+              <th>Status</th>
+              <th *ngIf="isAdminView">Usuário</th>
+              <th class="text-end">Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let reserva of filteredReservas">
+              <td>{{ reserva.espacoNome }}</td>
+              <td>{{ tipoLabel(reservaTipo(reserva)) }}</td>
+              <td>{{ reserva.data | date: 'dd/MM/yyyy' }}</td>
+              <td>{{ reserva.horarioInicio | slice:0:5 }} - {{ reserva.horarioFim | slice:0:5 }}</td>
+              <td>
+                <span
+                  class="status-pill"
+                  [class.is-active]="reserva.status === 'ATIVA'"
+                  [class.is-completed]="reserva.status === 'CONCLUIDA'"
+                  [class.is-cancelled]="reserva.status === 'CANCELADA'"
+                >
+                  {{ statusLabel(reserva.status) }}
+                </span>
+              </td>
+              <td *ngIf="isAdminView">{{ reserva.usuarioNome || '-' }}</td>
+              <td class="text-end">
+                <button
+                  *ngIf="reserva.status === 'ATIVA'"
+                  type="button"
+                  class="btn btn-sm btn-outline-danger"
+                  (click)="openCancelModal(reserva)"
+                >
+                  Cancelar
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #emptyState>
+        <div class="empty-state">
+          <h3>{{ emptyStateTitle }}</h3>
+          <p>{{ emptyStateDescription }}</p>
+          <a class="btn btn-brand text-white" routerLink="/reservas">Ir para reservas</a>
+        </div>
+      </ng-template>
+    </ng-container>
+  </article>
+</section>

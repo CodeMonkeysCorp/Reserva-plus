@@ -1,81 +1,211 @@
 <section class="bloqueio-grid">
-  <article class="card-soft panel">
-    <h1 class="panel-title">Bloquear horario</h1>
-    <p class="panel-subtitle">Defina indisponibilidade para manutencao, eventos ou limpeza.</p>
+  <article class="card-soft panel form-panel">
+    <h1 class="panel-title">Criar bloqueio</h1>
+    <p class="panel-subtitle">Escolha o espaço e a data. Depois selecione os blocos na agenda da página.</p>
 
     <div class="alert alert-success py-2" *ngIf="successMessage">{{ successMessage }}</div>
     <div class="alert alert-danger py-2" *ngIf="errorMessage">{{ errorMessage }}</div>
 
-    <div *ngIf="loadingEspacos" class="text-muted">Carregando espacos...</div>
+    <div *ngIf="loadingEspacos" class="text-muted">Carregando espaços...</div>
 
-    <form *ngIf="!loadingEspacos" [formGroup]="form" (ngSubmit)="criarBloqueio()" novalidate>
-      <div class="mb-3">
-        <label class="form-label" for="espacoId">Espaco</label>
-        <select id="espacoId" class="form-select" formControlName="espacoId" (change)="carregarBloqueios()">
-          <option [value]="0" disabled>Selecione um espaco</option>
-          <option *ngFor="let espaco of espacos" [value]="espaco.id">{{ espaco.nome }} ({{ espaco.tipo }})</option>
-        </select>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label" for="data">Data</label>
-        <input id="data" type="date" class="form-control" formControlName="data" (change)="carregarBloqueios()" />
-      </div>
-
-      <div class="time-row">
-        <div class="mb-3">
-          <label class="form-label" for="inicio">Inicio</label>
-          <input id="inicio" type="time" class="form-control" formControlName="horarioInicio" />
+    <form *ngIf="!loadingEspacos" class="form-stack" [formGroup]="form" (ngSubmit)="criarBloqueio()" novalidate>
+      <div class="filters-grid">
+        <div class="filters-field">
+          <label class="form-label" for="espacoId">Espaço</label>
+          <select id="espacoId" class="form-select" formControlName="espacoId">
+            <option [value]="0" disabled>Selecione um espaço</option>
+            <option *ngFor="let espaco of espacos" [value]="espaco.id">{{ espaco.nome }} ({{ tipoLabel(espaco.tipo) }})</option>
+          </select>
         </div>
-        <div class="mb-3">
-          <label class="form-label" for="fim">Fim</label>
-          <input id="fim" type="time" class="form-control" formControlName="horarioFim" />
+
+        <div class="filters-field">
+          <label class="form-label" for="data">Data inicial</label>
+          <input id="data" type="date" class="form-control" formControlName="data" [min]="minDate" />
         </div>
       </div>
 
-      <div class="mb-3">
-        <label class="form-label" for="motivo">Motivo (opcional)</label>
-        <textarea id="motivo" rows="3" class="form-control" formControlName="motivo"></textarea>
+      <div class="recurrence-card">
+        <label class="recurrence-toggle">
+          <input type="checkbox" formControlName="recorrenteSemanal" />
+          <span>Repetir semanalmente</span>
+        </label>
+
+        <div class="recurrence-grid" *ngIf="isRecurringEnabled">
+          <div class="filters-field">
+            <label class="form-label" for="dataFimRecorrencia">Até</label>
+            <input
+              id="dataFimRecorrencia"
+              type="date"
+              class="form-control"
+              formControlName="dataFimRecorrencia"
+              [min]="minRecurrenceEndDate"
+            />
+          </div>
+
+          <div class="helper-note recurrence-note">
+            A série será criada automaticamente no mesmo dia da semana por <strong>{{ recurrenceOccurrencesCount }}</strong> ocorrência(s).
+          </div>
+        </div>
+      </div>
+
+      <div class="selection-preview">
+        <div class="selection-preview-head">
+          <div>
+            <span class="preview-label">Horários selecionados</span>
+            <strong>{{ selectedIntervalLabel }}</strong>
+          </div>
+          <span class="selection-count" *ngIf="selectedSlots.length">{{ selectedSlots.length }} bloco(s)</span>
+        </div>
+
+        <p class="selection-meta">
+          {{ selectedEspaco?.nome || 'Escolha um espaço' }}
+          <span *ngIf="selectedEspaco">({{ selectedEspacoTipoLabel }})</span>
+          <span class="preview-separator">|</span>
+          {{ form.controls.data.value | date: 'dd/MM/yyyy' }}
+        </p>
+
+        <p class="selection-meta" *ngIf="selectedEspaco">Funcionamento: {{ selectedEspacoHorarioLabel }}</p>
+
+        <ng-template #semFaixaSelecionada>
+          <p class="helper-note mb-0">Selecione blocos livres consecutivos para montar o bloqueio.</p>
+        </ng-template>
+
+        <div *ngIf="selectedSlots.length; else semFaixaSelecionada" class="selected-slot-list">
+          <span class="selected-slot-pill" *ngFor="let slot of selectedSlots">{{ slot.inicio }} - {{ slot.fim }}</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="field-meta">
+          <label class="form-label mb-0" for="motivo">Motivo</label>
+          <span>{{ motivoLength }}/300</span>
+        </div>
+        <textarea
+          id="motivo"
+          rows="4"
+          class="form-control"
+          formControlName="motivo"
+          placeholder="Ex.: manutenção elétrica, evento interno, limpeza pesada."
+        ></textarea>
       </div>
 
       <div class="actions">
-        <button type="submit" class="btn btn-brand text-white" [disabled]="saving">
+        <button type="submit" class="btn btn-brand text-white" [disabled]="!canCreateBlock">
           {{ saving ? 'Salvando...' : 'Criar bloqueio' }}
-        </button>
-        <button type="button" class="btn btn-outline-primary" [disabled]="loadingBloqueios" (click)="carregarBloqueios()">
-          Atualizar lista
         </button>
       </div>
     </form>
   </article>
 
-  <article class="card-soft panel">
+  <article class="card-soft panel agenda-panel">
+    <h2 class="panel-title">Agenda de bloqueios</h2>
+    <p class="panel-subtitle">Selecione blocos livres na grade. Reservas e bloqueios aparecem sinalizados.</p>
+
+    <section class="agenda-shell">
+      <div class="agenda-header">
+        <div>
+          <h3>{{ selectedEspaco?.nome || 'Selecione um espaço' }}</h3>
+          <p class="mb-0">
+            <span *ngIf="selectedEspaco">{{ selectedEspacoTipoLabel }} | </span>
+            {{ form.controls.data.value | date: 'dd/MM/yyyy' }}
+          </p>
+          <p class="mb-0" *ngIf="selectedEspaco">Funcionamento: {{ selectedEspacoHorarioLabel }}</p>
+        </div>
+
+        <div class="agenda-legend">
+          <span class="legend-item legend-free">Livre</span>
+          <span class="legend-item legend-selected">Selecionado</span>
+          <span class="legend-item legend-reserved">Reservado</span>
+          <span class="legend-item legend-blocked">Bloqueado</span>
+        </div>
+      </div>
+
+      <div *ngIf="loadingAgenda" class="text-muted">Carregando horários do dia...</div>
+
+      <div *ngIf="!loadingAgenda && !selectedEspaco" class="agenda-empty">
+        Selecione um espaço para visualizar a agenda do dia.
+      </div>
+
+      <div *ngIf="!loadingAgenda && selectedEspaco && agendaSlots.length > 0" class="slot-grid">
+        <button
+          type="button"
+          class="slot-card"
+          *ngFor="let slot of agendaSlots"
+          [class.is-free]="slot.status === 'LIVRE' && !isSlotSelected(slot)"
+          [class.is-selected]="isSlotSelected(slot)"
+          [class.is-reserved]="slot.status === 'RESERVADO'"
+          [class.is-blocked]="slot.status === 'BLOQUEADO'"
+          [disabled]="slot.status !== 'LIVRE'"
+          (click)="toggleSlotSelection(slot)"
+        >
+          <span class="slot-time">{{ slot.inicio }} - {{ slot.fim }}</span>
+          <span class="slot-status">{{ slotStatusLabel(slot) }}</span>
+          <small class="slot-detail" *ngIf="slot.detalhe">{{ slot.detalhe }}</small>
+        </button>
+      </div>
+    </section>
+  </article>
+
+  <article class="card-soft panel list-panel">
     <h2 class="panel-title">Bloqueios do dia</h2>
-    <p class="panel-subtitle">Lista de horarios indisponiveis para o espaco selecionado.</p>
+    <p class="panel-subtitle">Lista de horários já indisponíveis para o espaço e a data selecionados.</p>
 
-    <div *ngIf="loadingBloqueios" class="text-muted">Carregando bloqueios...</div>
+    <div class="inline-action inline-danger" *ngIf="pendingDelete as pending">
+      <div>
+        <strong>{{ pending.removerSerie ? 'Excluir série' : 'Excluir bloqueio' }}</strong>
+        <p class="mb-0" *ngIf="!pending.removerSerie">
+          Você está prestes a remover o bloqueio de
+          <strong>{{ pending.bloqueio.horarioInicio | slice:0:5 }} - {{ pending.bloqueio.horarioFim | slice:0:5 }}</strong>.
+        </p>
+        <p class="mb-0" *ngIf="pending.removerSerie">
+          Você está prestes a remover toda a série automática desse horário.
+        </p>
+      </div>
 
-    <div class="table-responsive" *ngIf="!loadingBloqueios">
+      <div class="inline-action-buttons">
+        <button type="button" class="btn btn-outline-secondary" [disabled]="deleting" (click)="cancelRemoveBloqueio()">Voltar</button>
+        <button type="button" class="btn btn-danger" [disabled]="deleting" (click)="confirmRemoveBloqueio()">
+          {{ deleting ? 'Excluindo...' : 'Confirmar exclusão' }}
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="loadingAgenda" class="text-muted">Carregando bloqueios...</div>
+
+    <div class="table-shell table-responsive" *ngIf="!loadingAgenda">
       <table class="table align-middle">
         <thead>
           <tr>
-            <th>Horario</th>
+            <th>Horário</th>
             <th>Motivo</th>
-            <th class="text-end">Acao</th>
+            <th>Tipo</th>
+            <th class="text-end">Ação</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let bloqueio of bloqueios">
             <td>{{ bloqueio.horarioInicio | slice:0:5 }} - {{ bloqueio.horarioFim | slice:0:5 }}</td>
             <td>{{ bloqueio.motivo || '-' }}</td>
+            <td>{{ isRecurringBlock(bloqueio) ? 'Rotina semanal' : 'Avulso' }}</td>
             <td class="text-end">
-              <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="deleting" (click)="removerBloqueio(bloqueio)">
-                Excluir
-              </button>
+              <div class="table-actions">
+                <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="deleting" (click)="requestRemoveBloqueio(bloqueio)">
+                  Excluir dia
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  *ngIf="isRecurringBlock(bloqueio)"
+                  [disabled]="deleting"
+                  (click)="requestRemoveBloqueio(bloqueio, true)"
+                >
+                  Excluir série
+                </button>
+              </div>
             </td>
           </tr>
           <tr *ngIf="bloqueios.length === 0">
-            <td colspan="3" class="text-center text-muted py-3">Nenhum bloqueio para o filtro atual.</td>
+            <td colspan="4" class="text-center text-muted py-3">Nenhum bloqueio para o filtro atual.</td>
           </tr>
         </tbody>
       </table>

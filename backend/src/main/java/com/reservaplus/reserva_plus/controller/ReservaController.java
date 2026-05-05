@@ -1,9 +1,11 @@
 package com.reservaplus.reserva_plus.controller;
 
+import com.reservaplus.reserva_plus.dto.reserva.AgendaDiaResponse;
 import com.reservaplus.reserva_plus.dto.reserva.ReservaCreateRequest;
 import com.reservaplus.reserva_plus.dto.reserva.ReservaResponse;
 import com.reservaplus.reserva_plus.service.ReservaService;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -13,8 +15,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -41,10 +45,21 @@ public class ReservaController {
     }
 
     @GetMapping("/historico")
-    public ResponseEntity<List<ReservaResponse>> historico(Authentication authentication) {
+    public ResponseEntity<List<ReservaResponse>> historico(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data,
+            Authentication authentication
+    ) {
         String email = authentication.getName();
         boolean isAdmin = hasRole(authentication, "ROLE_ADMIN");
-        return ResponseEntity.ok(reservaService.historico(email, isAdmin));
+        return ResponseEntity.ok(reservaService.historico(email, isAdmin, data));
+    }
+
+    @GetMapping("/agenda")
+    public ResponseEntity<AgendaDiaResponse> agendaDoDia(
+            @RequestParam Long espacoId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data
+    ) {
+        return ResponseEntity.ok(reservaService.agendaDoDia(espacoId, data));
     }
 
     private boolean hasRole(Authentication authentication, String role) {

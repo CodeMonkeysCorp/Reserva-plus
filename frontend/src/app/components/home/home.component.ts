@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { finalize, forkJoin } from 'rxjs';
+import { finalize, forkJoin, of } from 'rxjs';
 import { Reserva } from '../../core/models';
 import { ApiErrorService } from '../../core/services/api-error.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -11,7 +10,7 @@ import { ReservasService } from '../../core/services/reservas.service';
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css'
 })
@@ -36,12 +35,18 @@ export class HomeComponent implements OnInit {
     this.loadDashboard();
   }
 
+  get heroDescription(): string {
+    return this.isAdmin
+      ? 'Acompanhe as reservas do sistema, organize os espaços compartilhados e controle os bloqueios.'
+      : 'Acompanhe suas reservas, confira o próximo horário confirmado e acesse a agenda dos espaços.';
+  }
+
   private loadDashboard(): void {
     this.loading = true;
     this.errorMessage = '';
 
     forkJoin({
-      espacos: this.espacosService.list(),
+      espacos: this.isAdmin ? this.espacosService.list() : of([]),
       historico: this.reservasService.historico()
     })
       .pipe(finalize(() => (this.loading = false)))

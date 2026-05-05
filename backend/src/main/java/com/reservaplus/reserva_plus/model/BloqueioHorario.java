@@ -37,6 +37,9 @@ public class BloqueioHorario {
     @Column(length = 300)
     private String motivo;
 
+    @Column(length = 36)
+    private String serieRecorrenciaId;
+
     public Long getId() {
         return id;
     }
@@ -83,5 +86,13 @@ public class BloqueioHorario {
 
     public void setMotivo(String motivo) {
         this.motivo = motivo;
+    }
+
+    public String getSerieRecorrenciaId() {
+        return serieRecorrenciaId;
+    }
+
+    public void setSerieRecorrenciaId(String serieRecorrenciaId) {
+        this.serieRecorrenciaId = serieRecorrenciaId;
     }
 }

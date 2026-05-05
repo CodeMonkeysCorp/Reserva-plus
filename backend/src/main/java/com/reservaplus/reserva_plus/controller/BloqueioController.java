@@ -43,8 +43,16 @@ public class BloqueioController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        bloqueioService.delete(id);
+    public ResponseEntity<Void> delete(
+            @PathVariable Long id,
+            @RequestParam(name = "removerSerie", defaultValue = "false") boolean removerSerie
+    ) {
+        if (removerSerie) {
+            bloqueioService.deleteSerie(id);
+        }
+        else {
+            bloqueioService.delete(id);
+        }
         return ResponseEntity.noContent().build();
     }
 }

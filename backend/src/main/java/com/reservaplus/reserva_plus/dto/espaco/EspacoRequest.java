@@ -5,17 +5,25 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.time.LocalTime;
+
 public class EspacoRequest {
 
-    @NotBlank
-    @Size(min = 2, max = 120)
+    @NotBlank(message = "Informe o nome do espaço.")
+    @Size(min = 2, max = 120, message = "O nome do espaço deve ter entre 2 e 120 caracteres.")
     private String nome;
 
-    @NotNull
+    @NotNull(message = "Selecione o tipo do espaço.")
     private EspacoTipo tipo;
 
-    @Size(max = 500)
+    @Size(max = 500, message = "A descrição deve ter no máximo 500 caracteres.")
     private String descricao;
+
+    @NotNull(message = "Informe o horário inicial de funcionamento.")
+    private LocalTime horarioFuncionamentoInicio;
+
+    @NotNull(message = "Informe o horário final de funcionamento.")
+    private LocalTime horarioFuncionamentoFim;
 
     private Boolean ativo = true;
 
@@ -41,6 +49,22 @@ public class EspacoRequest {
 
     public void setDescricao(String descricao) {
         this.descricao = descricao;
+    }
+
+    public LocalTime getHorarioFuncionamentoInicio() {
+        return horarioFuncionamentoInicio;
+    }
+
+    public void setHorarioFuncionamentoInicio(LocalTime horarioFuncionamentoInicio) {
+        this.horarioFuncionamentoInicio = horarioFuncionamentoInicio;
+    }
+
+    public LocalTime getHorarioFuncionamentoFim() {
+        return horarioFuncionamentoFim;
+    }
+
+    public void setHorarioFuncionamentoFim(LocalTime horarioFuncionamentoFim) {
+        this.horarioFuncionamentoFim = horarioFuncionamentoFim;
     }
 
     public Boolean getAtivo() {

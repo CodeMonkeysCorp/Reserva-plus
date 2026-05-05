@@ -20,3 +20,7 @@ app:
   jwt:
     secret: ${JWT_SECRET:troque-essa-chave-por-uma-chave-longa-em-producao}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  reservas:
+    conclusao:
+      cron: ${RESERVA_CONCLUSAO_CRON:0 0 * * * *}
+      zone: ${RESERVA_CONCLUSAO_ZONE:America/Sao_Paulo}

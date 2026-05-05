@@ -28,6 +28,7 @@ export class LoginComponent {
 
   loading = false;
   errorMessage = '';
+  showSenha = false;
 
   constructor() {
     if (this.authService.isAuthenticated()) {
@@ -56,6 +57,10 @@ export class LoginComponent {
           this.errorMessage = this.apiErrorService.toMessage(error, 'Falha ao autenticar.');
         }
       });
+  }
+
+  toggleSenha(): void {
+    this.showSenha = !this.showSenha;
   }
 
   private redirectUrl(): string {

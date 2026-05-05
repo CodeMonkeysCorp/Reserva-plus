@@ -1,16 +1,17 @@
 .bloqueio-grid {
   display: grid;
-  grid-template-columns: 360px 1fr;
+  grid-template-columns: 1fr;
   gap: 1rem;
+  align-items: start;
 }
 
 .panel {
-  padding: 1rem 1.1rem;
+  padding: 1rem 1.1rem 0.9rem;
 }
 
 .panel-title {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   font-family: "Space Grotesk", "Segoe UI", sans-serif;
 }
 
@@ -20,10 +21,128 @@
   color: #5b7468;
 }
 
-.time-row {
+.form-panel {
+  background:
+    linear-gradient(180deg, rgba(15, 107, 77, 0.08), rgba(255, 255, 255, 0) 26%),
+    #ffffff;
+}
+
+.form-stack {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.7rem;
+  gap: 0.95rem;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.4fr) minmax(180px, 0.8fr);
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.filters-field {
+  min-width: 0;
+}
+
+.recurrence-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.95rem 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(20, 95, 156, 0.12);
+  background: linear-gradient(180deg, rgba(20, 95, 156, 0.04), rgba(255, 255, 255, 0.96));
+}
+
+.recurrence-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  color: #24493d;
+}
+
+.recurrence-toggle input {
+  width: 1rem;
+  height: 1rem;
+}
+
+.recurrence-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) 1fr;
+  gap: 0.85rem;
+  align-items: end;
+}
+
+.recurrence-note {
+  margin-bottom: 0.2rem;
+}
+
+.field-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.45rem;
+  color: #61786d;
+  font-size: 0.84rem;
+}
+
+.selection-preview {
+  padding: 1rem 1.05rem;
+  border-radius: 16px;
+  border: 1px solid rgba(15, 107, 77, 0.12);
+  background: linear-gradient(180deg, #eef8f2 0%, #fbfdfc 100%);
+}
+
+.selection-preview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.preview-label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #2a684f;
+}
+
+.selection-count {
+  border-radius: 999px;
+  padding: 0.32rem 0.68rem;
+  background: rgba(15, 107, 77, 0.1);
+  color: #0f6b4d;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.selection-meta {
+  margin-bottom: 0.8rem;
+  color: #486459;
+}
+
+.preview-separator {
+  margin: 0 0.45rem;
+  color: #7a9187;
+}
+
+.selected-slot-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.selected-slot-pill {
+  padding: 0.42rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(20, 95, 156, 0.12);
+  color: #145f9c;
+  font-size: 0.84rem;
+  font-weight: 600;
 }
 
 .actions {
@@ -32,8 +151,209 @@
   flex-wrap: wrap;
 }
 
+.agenda-shell {
+  padding: 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(20, 95, 156, 0.12);
+  background:
+    linear-gradient(135deg, rgba(20, 95, 156, 0.05), rgba(15, 107, 77, 0.06)),
+    #ffffff;
+}
+
+.agenda-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.agenda-header h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+.agenda-header p {
+  color: #61786d;
+}
+
+.agenda-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  font-size: 0.8rem;
+  color: #4f675c;
+}
+
+.legend-item::before {
+  content: "";
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 999px;
+}
+
+.legend-free::before {
+  background: rgba(15, 107, 77, 0.14);
+}
+
+.legend-selected::before {
+  background: #0f6b4d;
+}
+
+.legend-reserved::before {
+  background: rgba(20, 95, 156, 0.2);
+}
+
+.legend-blocked::before {
+  background: rgba(194, 59, 59, 0.2);
+}
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.8rem;
+}
+
+.slot-card {
+  width: 100%;
+  text-align: left;
+  padding: 0.9rem 0.95rem;
+  border-radius: 14px;
+  border: 1px solid rgba(29, 43, 36, 0.1);
+  background: #ffffff;
+  display: grid;
+  gap: 0.25rem;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.slot-card.is-free {
+  cursor: pointer;
+}
+
+.slot-card.is-free:hover {
+  transform: translateY(-1px);
+  border-color: rgba(15, 107, 77, 0.24);
+  box-shadow: 0 10px 24px rgba(10, 30, 23, 0.08);
+}
+
+.slot-card.is-selected {
+  border-color: #0f6b4d;
+  background: linear-gradient(180deg, rgba(15, 107, 77, 0.12), rgba(255, 255, 255, 0.96));
+  color: #124635;
+}
+
+.slot-card.is-reserved {
+  background: rgba(20, 95, 156, 0.08);
+  border-color: rgba(20, 95, 156, 0.16);
+  color: #30576f;
+}
+
+.slot-card.is-blocked {
+  background: rgba(194, 59, 59, 0.07);
+  border-color: rgba(194, 59, 59, 0.14);
+  color: #7a4040;
+}
+
+.slot-card[disabled] {
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.slot-time {
+  font-weight: 700;
+}
+
+.slot-status {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slot-detail {
+  color: inherit;
+  font-size: 0.82rem;
+}
+
+.agenda-empty {
+  border-radius: 12px;
+  padding: 1rem;
+  background: rgba(15, 107, 77, 0.06);
+  color: #5c7368;
+}
+
+.inline-action {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.05rem;
+  border-radius: 16px;
+  margin-bottom: 1rem;
+}
+
+.inline-action strong {
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.inline-action p {
+  color: #567066;
+}
+
+.inline-action.inline-danger {
+  border: 1px solid rgba(194, 59, 59, 0.16);
+  background: rgba(194, 59, 59, 0.05);
+}
+
+.inline-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.table-shell {
+  padding-top: 1rem;
+  border-top: 1px solid rgba(29, 43, 36, 0.08);
+}
+
+.table-actions {
+  display: inline-flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 980px) {
-  .bloqueio-grid {
+  .filters-grid {
     grid-template-columns: 1fr;
+  }
+
+  .recurrence-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .agenda-header {
+    flex-direction: column;
+  }
+
+  .agenda-legend {
+    justify-content: flex-start;
+  }
+
+  .slot-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .inline-action {
+    flex-direction: column;
   }
 }

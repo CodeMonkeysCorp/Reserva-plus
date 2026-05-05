@@ -2,6 +2,8 @@ package com.reservaplus.reserva_plus.dto.espaco;
 
 import com.reservaplus.reserva_plus.model.EspacoTipo;
 
+import java.time.LocalTime;
+
 public class EspacoResponse {
 
     private Long id;
@@ -9,6 +11,8 @@ public class EspacoResponse {
     private EspacoTipo tipo;
     private String descricao;
     private boolean ativo;
+    private LocalTime horarioFuncionamentoInicio;
+    private LocalTime horarioFuncionamentoFim;
 
     public Long getId() {
         return id;
@@ -48,5 +52,21 @@ public class EspacoResponse {
 
     public void setAtivo(boolean ativo) {
         this.ativo = ativo;
+    }
+
+    public LocalTime getHorarioFuncionamentoInicio() {
+        return horarioFuncionamentoInicio;
+    }
+
+    public void setHorarioFuncionamentoInicio(LocalTime horarioFuncionamentoInicio) {
+        this.horarioFuncionamentoInicio = horarioFuncionamentoInicio;
+    }
+
+    public LocalTime getHorarioFuncionamentoFim() {
+        return horarioFuncionamentoFim;
+    }
+
+    public void setHorarioFuncionamentoFim(LocalTime horarioFuncionamentoFim) {
+        this.horarioFuncionamentoFim = horarioFuncionamentoFim;
     }
 }

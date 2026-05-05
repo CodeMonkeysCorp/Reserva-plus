@@ -1,0 +1,149 @@
+<section class="page-grid usuarios-page">
+  <article class="card-soft panel list-panel">
+    <div class="list-head">
+      <div>
+        <h1 class="panel-title">Gestão de usuários</h1>
+        <p class="panel-subtitle">Gerencie acessos, filtre perfis e escolha um usuário para editar sem sair da página.</p>
+      </div>
+      <span class="results-count">{{ resultsLabel }}</span>
+    </div>
+
+    <div class="alert alert-success py-2" *ngIf="successMessage">{{ successMessage }}</div>
+    <div class="alert alert-danger py-2" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+    <div class="filters-grid">
+      <div>
+        <label class="form-label" for="buscaUsuario">Buscar</label>
+        <input
+          id="buscaUsuario"
+          type="text"
+          class="form-control"
+          [formControl]="filtroForm.controls.busca"
+          placeholder="Nome ou e-mail"
+        />
+      </div>
+
+      <div>
+        <label class="form-label" for="filtroRole">Perfil</label>
+        <select id="filtroRole" class="form-select" [formControl]="filtroForm.controls.role">
+          <option value="TODOS">Todos os perfis</option>
+          <option *ngFor="let role of roleOptions" [value]="role.value">{{ role.label }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div *ngIf="loading" class="text-muted">Carregando usuários...</div>
+
+    <div class="table-shell table-responsive" *ngIf="!loading">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>E-mail</th>
+            <th>Perfil</th>
+            <th class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let usuario of filteredUsuarios">
+            <td>
+              <strong>{{ usuario.nome }}</strong>
+              <div class="small text-muted" *ngIf="usuario.id === currentUserId">Sua conta atual</div>
+            </td>
+            <td>{{ usuario.email }}</td>
+            <td>
+              <span class="role-pill" [class.is-admin]="usuario.role === 'ADMIN'" [class.is-user]="usuario.role === 'USER'">
+                {{ roleLabel(usuario.role) }}
+              </span>
+            </td>
+            <td class="text-end">
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="edit(usuario)">
+                Gerenciar
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="filteredUsuarios.length === 0">
+            <td colspan="4" class="text-center text-muted py-3">Nenhum usuário encontrado para os filtros atuais.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="card-soft panel form-panel" #editorPanel>
+    <h2 class="panel-title">{{ selectedUser ? 'Editar acesso' : 'Edição de acesso' }}</h2>
+    <p class="panel-subtitle">
+      {{ selectedUser
+        ? 'Ajuste perfil e redefina senha sem depender de envio por e-mail.'
+        : 'Selecione um usuário na tabela acima para alterar permissões e redefinir senha.' }}
+    </p>
+
+    <ng-container *ngIf="selectedUser as usuario; else emptySelection">
+      <div class="user-summary">
+        <div>
+          <strong>{{ usuario.nome }}</strong>
+          <p class="mb-0">{{ usuario.email }}</p>
+        </div>
+
+        <div class="summary-badges">
+          <span class="role-pill" [class.is-admin]="usuario.role === 'ADMIN'" [class.is-user]="usuario.role === 'USER'">
+            {{ roleLabel(usuario.role) }}
+          </span>
+          <span class="self-pill" *ngIf="usuario.id === currentUserId">Você</span>
+        </div>
+      </div>
+
+      <form class="form-stack" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div>
+          <label class="form-label" for="role">Perfil de acesso</label>
+          <select id="role" class="form-select" formControlName="role" [disabled]="!canEditRole">
+            <option *ngFor="let role of roleOptions" [value]="role.value">{{ role.label }}</option>
+          </select>
+          <div class="helper-note" *ngIf="!canEditRole">
+            O próprio perfil de administrador não pode ser alterado por esta tela.
+          </div>
+        </div>
+
+        <div>
+          <label class="form-label" for="senha">Nova senha</label>
+          <input
+            id="senha"
+            type="password"
+            class="form-control"
+            formControlName="senha"
+            placeholder="Deixe em branco para manter a senha atual"
+          />
+          <div class="helper-note">Use entre 6 e 100 caracteres quando precisar redefinir o acesso.</div>
+        </div>
+
+        <div>
+          <label class="form-label" for="confirmacaoSenha">Confirmar nova senha</label>
+          <input
+            id="confirmacaoSenha"
+            type="password"
+            class="form-control"
+            formControlName="confirmacaoSenha"
+            placeholder="Repita a nova senha"
+          />
+          <div class="helper-note text-danger" *ngIf="passwordMismatch">A confirmação deve ser igual à nova senha.</div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-brand text-white" [disabled]="!canSubmit">
+            {{ saving ? 'Salvando...' : 'Salvar alterações' }}
+          </button>
+          <button type="button" class="btn btn-outline-secondary" [disabled]="saving" (click)="cancelEdit()">
+            Fechar edição
+          </button>
+        </div>
+      </form>
+    </ng-container>
+
+    <ng-template #emptySelection>
+      <div class="empty-selection">
+        <h2>Selecione um usuário</h2>
+        <p>Escolha um cadastro na tabela acima para gerenciar permissões e redefinir senha.</p>
+      </div>
+    </ng-template>
+  </article>
+</section>

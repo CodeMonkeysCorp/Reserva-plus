@@ -21,7 +21,8 @@ export class BloqueiosService {
     return this.http.post<Bloqueio>(`${environment.apiUrl}/bloqueios`, payload);
   }
 
-  delete(id: number): Observable<void> {
-    return this.http.delete<void>(`${environment.apiUrl}/bloqueios/${id}`);
+  delete(id: number, removerSerie = false): Observable<void> {
+    const params = removerSerie ? new HttpParams().set('removerSerie', 'true') : undefined;
+    return this.http.delete<void>(`${environment.apiUrl}/bloqueios/${id}`, { params });
   }
 }

@@ -7,6 +7,9 @@
   --primary-2: #145f9c;
   --danger: #c23b3b;
   --text: #1d2b24;
+  --muted: #5b7468;
+  --border-soft: rgba(29, 43, 36, 0.12);
+  --surface-soft: #f7fbf8;
 }
 
 * {
@@ -22,6 +25,7 @@ body {
     linear-gradient(170deg, #eff8f3 0%, #f7f8fb 100%);
   color: var(--text);
   font-family: "Outfit", "Trebuchet MS", sans-serif;
+  color-scheme: light;
 }
 
 .app-container {
@@ -45,6 +49,69 @@ body {
   border-color: #0b5d43;
 }
 
+.form-label {
+  font-weight: 600;
+  color: #244236;
+}
+
+.form-control,
+.form-select {
+  min-height: 3rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(180deg, #ffffff, #fbfdfc);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.form-select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #47695a 50%),
+    linear-gradient(135deg, #47695a 50%, transparent 50%);
+  background-position:
+    calc(100% - 20px) calc(50% - 3px),
+    calc(100% - 14px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 2.9rem;
+}
+
+textarea.form-control {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.form-control::placeholder,
+.form-select::placeholder {
+  color: #82958a;
+}
+
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+  border-color: rgba(15, 107, 77, 0.55);
+  box-shadow: 0 0 0 0.22rem rgba(15, 107, 77, 0.14);
+}
+
+input[type="date"],
+input[type="time"] {
+  padding-right: 1rem;
+}
+
+.helper-note {
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
 .table thead th {
   white-space: nowrap;
+  color: #4d6559;
+  border-bottom-width: 1px;
+  border-bottom-color: rgba(29, 43, 36, 0.08);
+}
+
+.table tbody td {
+  border-bottom-color: rgba(29, 43, 36, 0.08);
 }

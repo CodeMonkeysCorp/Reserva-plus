@@ -28,6 +28,10 @@
   gap: 1rem;
 }
 
+.stats-grid.user-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .stat-card {
   padding: 1rem 1.1rem;
 }
@@ -46,26 +50,19 @@
   color: #16392c;
 }
 
-.next-card,
-.actions-card {
+.next-card {
   padding: 1rem 1.1rem;
 }
 
-.next-card h2,
-.actions-card h2 {
+.next-card h2 {
   margin: 0 0 0.75rem;
   font-size: 1.15rem;
   font-family: "Space Grotesk", "Segoe UI", sans-serif;
 }
 
-.actions-grid {
-  display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
 @media (max-width: 900px) {
-  .stats-grid {
+  .stats-grid,
+  .stats-grid.user-grid {
     grid-template-columns: 1fr;
   }
 }
