@@ -4,10 +4,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
+import { collectEspacoTipos, formatEspacoTipoLabel } from '../../core/espaco-tipo';
 import { Espaco, EspacoTipo, Reserva, ReservaStatus } from '../../core/models';
 import { ApiErrorService } from '../../core/services/api-error.service';
 import { EspacosService } from '../../core/services/espacos.service';
 import { ReservasService } from '../../core/services/reservas.service';
+import { DateFieldComponent } from '../../shared/ui/date-field/date-field.component';
+import { SelectFieldComponent } from '../../shared/ui/select-field/select-field.component';
 
 type FiltroTipoEspaco = 'TODOS' | EspacoTipo;
 type FiltroStatusReserva = 'TODOS' | ReservaStatus;
@@ -16,7 +19,7 @@ type ViewMode = 'user' | 'admin';
 @Component({
   selector: 'app-historico-reservas',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, SelectFieldComponent, DateFieldComponent],
   templateUrl: './historico-reservas.component.html',
   styleUrl: './historico-reservas.component.css'
 })
@@ -29,12 +32,6 @@ export class HistoricoReservasComponent implements OnInit {
   private readonly apiErrorService = inject(ApiErrorService);
 
   private readonly viewMode: ViewMode = this.route.snapshot.data['view'] === 'admin' ? 'admin' : 'user';
-
-  readonly tiposFiltro: Array<{ value: FiltroTipoEspaco; label: string }> = [
-    { value: 'TODOS', label: 'Todos os tipos' },
-    { value: 'QUADRA', label: 'Quadra' },
-    { value: 'QUIOSQUE', label: 'Quiosque' }
-  ];
 
   readonly statusFiltro: Array<{ value: FiltroStatusReserva; label: string }> = [
     { value: 'TODOS', label: 'Todos os status' },
@@ -144,6 +141,36 @@ export class HistoricoReservasComponent implements OnInit {
     return !this.cancelling;
   }
 
+  get tipoOptions(): Array<{ value: FiltroTipoEspaco; label: string }> {
+    const selectedTipo = this.form.controls.tipo.value;
+    const tipos = collectEspacoTipos([
+      ...this.espacos.map((espaco) => espaco.tipo),
+      selectedTipo === 'TODOS' ? null : selectedTipo
+    ]);
+
+    return [
+      { value: 'TODOS', label: 'Todos os tipos' },
+      ...tipos.map((tipo) => ({
+        value: tipo,
+        label: this.tipoLabel(tipo)
+      }))
+    ];
+  }
+
+  get espacoOptions(): Array<{ value: number; label: string }> {
+    return [
+      { value: 0, label: 'Todos os espaços' },
+      ...this.filteredEspacos.map((espaco) => ({
+        value: espaco.id,
+        label: espaco.nome
+      }))
+    ];
+  }
+
+  get statusOptions(): Array<{ value: FiltroStatusReserva; label: string }> {
+    return this.statusFiltro;
+  }
+
   openCancelModal(reserva: Reserva): void {
     if (reserva.status !== 'ATIVA') {
       return;
@@ -198,7 +225,7 @@ export class HistoricoReservasComponent implements OnInit {
       return 'Não informado';
     }
 
-    return tipo === 'QUADRA' ? 'Quadra' : 'Quiosque';
+    return formatEspacoTipoLabel(tipo);
   }
 
   formatDateLabel(date: string): string {

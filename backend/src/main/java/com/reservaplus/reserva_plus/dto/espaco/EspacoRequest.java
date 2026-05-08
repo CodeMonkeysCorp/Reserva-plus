@@ -1,6 +1,5 @@
 package com.reservaplus.reserva_plus.dto.espaco;
 
-import com.reservaplus.reserva_plus.model.EspacoTipo;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -9,20 +8,21 @@ import java.time.LocalTime;
 
 public class EspacoRequest {
 
-    @NotBlank(message = "Informe o nome do espaço.")
-    @Size(min = 2, max = 120, message = "O nome do espaço deve ter entre 2 e 120 caracteres.")
+    @NotBlank(message = "Informe o nome do espaco.")
+    @Size(min = 2, max = 120, message = "O nome do espaco deve ter entre 2 e 120 caracteres.")
     private String nome;
 
-    @NotNull(message = "Selecione o tipo do espaço.")
-    private EspacoTipo tipo;
+    @NotBlank(message = "Selecione o tipo do espaco.")
+    @Size(max = 60, message = "O tipo do espaco deve ter no maximo 60 caracteres.")
+    private String tipo;
 
-    @Size(max = 500, message = "A descrição deve ter no máximo 500 caracteres.")
+    @Size(max = 500, message = "A descricao deve ter no maximo 500 caracteres.")
     private String descricao;
 
-    @NotNull(message = "Informe o horário inicial de funcionamento.")
+    @NotNull(message = "Informe o horario inicial de funcionamento.")
     private LocalTime horarioFuncionamentoInicio;
 
-    @NotNull(message = "Informe o horário final de funcionamento.")
+    @NotNull(message = "Informe o horario final de funcionamento.")
     private LocalTime horarioFuncionamentoFim;
 
     private Boolean ativo = true;
@@ -35,11 +35,11 @@ public class EspacoRequest {
         this.nome = nome;
     }
 
-    public EspacoTipo getTipo() {
+    public String getTipo() {
         return tipo;
     }
 
-    public void setTipo(EspacoTipo tipo) {
+    public void setTipo(String tipo) {
         this.tipo = tipo;
     }
 

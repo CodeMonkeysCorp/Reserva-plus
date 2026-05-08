@@ -1,5 +1,5 @@
 export type UserRole = 'ADMIN' | 'USER';
-export type EspacoTipo = 'QUADRA' | 'QUIOSQUE';
+export type EspacoTipo = string;
 export type ReservaStatus = 'ATIVA' | 'CONCLUIDA' | 'CANCELADA';
 
 export interface LoginPayload {

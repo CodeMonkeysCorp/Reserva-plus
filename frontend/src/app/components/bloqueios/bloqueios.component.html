@@ -12,15 +12,12 @@
       <div class="filters-grid">
         <div class="filters-field">
           <label class="form-label" for="espacoId">Espaço</label>
-          <select id="espacoId" class="form-select" formControlName="espacoId">
-            <option [value]="0" disabled>Selecione um espaço</option>
-            <option *ngFor="let espaco of espacos" [value]="espaco.id">{{ espaco.nome }} ({{ tipoLabel(espaco.tipo) }})</option>
-          </select>
+          <app-select-field formControlName="espacoId" [options]="espacoOptions"></app-select-field>
         </div>
 
         <div class="filters-field">
           <label class="form-label" for="data">Data inicial</label>
-          <input id="data" type="date" class="form-control" formControlName="data" [min]="minDate" />
+          <app-date-field formControlName="data" [min]="minDate"></app-date-field>
         </div>
       </div>
 
@@ -33,13 +30,7 @@
         <div class="recurrence-grid" *ngIf="isRecurringEnabled">
           <div class="filters-field">
             <label class="form-label" for="dataFimRecorrencia">Até</label>
-            <input
-              id="dataFimRecorrencia"
-              type="date"
-              class="form-control"
-              formControlName="dataFimRecorrencia"
-              [min]="minRecurrenceEndDate"
-            />
+            <app-date-field formControlName="dataFimRecorrencia" [min]="minRecurrenceEndDate"></app-date-field>
           </div>
 
           <div class="helper-note recurrence-note">
@@ -150,26 +141,6 @@
     <h2 class="panel-title">Bloqueios do dia</h2>
     <p class="panel-subtitle">Lista de horários já indisponíveis para o espaço e a data selecionados.</p>
 
-    <div class="inline-action inline-danger" *ngIf="pendingDelete as pending">
-      <div>
-        <strong>{{ pending.removerSerie ? 'Excluir série' : 'Excluir bloqueio' }}</strong>
-        <p class="mb-0" *ngIf="!pending.removerSerie">
-          Você está prestes a remover o bloqueio de
-          <strong>{{ pending.bloqueio.horarioInicio | slice:0:5 }} - {{ pending.bloqueio.horarioFim | slice:0:5 }}</strong>.
-        </p>
-        <p class="mb-0" *ngIf="pending.removerSerie">
-          Você está prestes a remover toda a série automática desse horário.
-        </p>
-      </div>
-
-      <div class="inline-action-buttons">
-        <button type="button" class="btn btn-outline-secondary" [disabled]="deleting" (click)="cancelRemoveBloqueio()">Voltar</button>
-        <button type="button" class="btn btn-danger" [disabled]="deleting" (click)="confirmRemoveBloqueio()">
-          {{ deleting ? 'Excluindo...' : 'Confirmar exclusão' }}
-        </button>
-      </div>
-    </div>
-
     <div *ngIf="loadingAgenda" class="text-muted">Carregando bloqueios...</div>
 
     <div class="table-shell table-responsive" *ngIf="!loadingAgenda">
@@ -189,17 +160,17 @@
             <td>{{ isRecurringBlock(bloqueio) ? 'Rotina semanal' : 'Avulso' }}</td>
             <td class="text-end">
               <div class="table-actions">
-                <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="deleting" (click)="requestRemoveBloqueio(bloqueio)">
-                  Excluir dia
+                <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="deleting" (click)="removeBloqueio(bloqueio)">
+                  {{ isDeleting(bloqueio) ? 'Excluindo...' : 'Excluir bloqueio' }}
                 </button>
                 <button
                   type="button"
                   class="btn btn-sm btn-outline-secondary"
                   *ngIf="isRecurringBlock(bloqueio)"
                   [disabled]="deleting"
-                  (click)="requestRemoveBloqueio(bloqueio, true)"
+                  (click)="removeBloqueio(bloqueio, true)"
                 >
-                  Excluir série
+                  {{ isDeleting(bloqueio, true) ? 'Excluindo...' : 'Excluir todos da rotina' }}
                 </button>
               </div>
             </td>

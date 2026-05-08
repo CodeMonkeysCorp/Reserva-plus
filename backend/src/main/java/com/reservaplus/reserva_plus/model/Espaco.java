@@ -2,8 +2,6 @@ package com.reservaplus.reserva_plus.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -22,9 +20,8 @@ public class Espaco {
     @Column(nullable = false, length = 120)
     private String nome;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private EspacoTipo tipo;
+    @Column(nullable = false, length = 60)
+    private String tipo;
 
     @Column(length = 500)
     private String descricao;
@@ -54,11 +51,11 @@ public class Espaco {
         this.nome = nome;
     }
 
-    public EspacoTipo getTipo() {
+    public String getTipo() {
         return tipo;
     }
 
-    public void setTipo(EspacoTipo tipo) {
+    public void setTipo(String tipo) {
         this.tipo = tipo;
     }
 

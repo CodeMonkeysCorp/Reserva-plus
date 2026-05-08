@@ -255,6 +255,7 @@ public class ReservaServiceImpl implements ReservaService {
         response.setHorarioInicio(bloqueio.getHorarioInicio());
         response.setHorarioFim(bloqueio.getHorarioFim());
         response.setMotivo(bloqueio.getMotivo());
+        response.setSerieRecorrenciaId(bloqueio.getSerieRecorrenciaId());
         return response;
     }
 

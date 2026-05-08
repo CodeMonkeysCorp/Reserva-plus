@@ -4,10 +4,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { AgendaDia, Espaco, EspacoTipo, ReservaCreatePayload } from '../../core/models';
+import { collectEspacoTipos, formatEspacoTipoLabel } from '../../core/espaco-tipo';
 import { ApiErrorService } from '../../core/services/api-error.service';
 import { AuthService } from '../../core/services/auth.service';
 import { EspacosService } from '../../core/services/espacos.service';
 import { ReservasService } from '../../core/services/reservas.service';
+import { DateFieldComponent } from '../../shared/ui/date-field/date-field.component';
+import { SelectFieldComponent } from '../../shared/ui/select-field/select-field.component';
 
 type FiltroTipoEspaco = 'TODOS' | EspacoTipo;
 type AgendaSlotStatus = 'LIVRE' | 'RESERVADO' | 'BLOQUEADO' | 'ENCERRADO';
@@ -62,7 +65,7 @@ function bookingDateRangeValidator(maxDaysAhead: number): ValidatorFn {
 @Component({
   selector: 'app-reservas',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, SelectFieldComponent, DateFieldComponent],
   templateUrl: './reservas.component.html',
   styleUrl: './reservas.component.css'
 })
@@ -73,12 +76,6 @@ export class ReservasComponent implements OnInit {
   private readonly espacosService = inject(EspacosService);
   private readonly authService = inject(AuthService);
   private readonly apiErrorService = inject(ApiErrorService);
-
-  readonly tiposFiltro: Array<{ value: FiltroTipoEspaco; label: string }> = [
-    { value: 'TODOS', label: 'Todos os tipos' },
-    { value: 'QUADRA', label: 'Quadra' },
-    { value: 'QUIOSQUE', label: 'Quiosque' }
-  ];
 
   readonly maxBookingWindowDays = RESERVA_MAX_DAYS_AHEAD;
   readonly form = this.fb.nonNullable.group({
@@ -227,7 +224,7 @@ export class ReservasComponent implements OnInit {
   }
 
   tipoLabel(tipo: EspacoTipo): string {
-    return tipo === 'QUADRA' ? 'Quadra' : 'Quiosque';
+    return formatEspacoTipoLabel(tipo);
   }
 
   get filteredEspacos(): Espaco[] {
@@ -243,6 +240,34 @@ export class ReservasComponent implements OnInit {
     return this.filteredEspacos.length > 0;
   }
 
+  get tipoOptions(): Array<{ value: FiltroTipoEspaco; label: string }> {
+    const selectedTipo = this.form.controls.tipo.value;
+    const tipos = collectEspacoTipos([
+      ...this.espacos.map((espaco) => espaco.tipo),
+      selectedTipo === 'TODOS' ? null : selectedTipo
+    ]);
+
+    return [
+      { value: 'TODOS', label: 'Todos os tipos' },
+      ...tipos.map((tipo) => ({
+        value: tipo,
+        label: this.tipoLabel(tipo)
+      }))
+    ];
+  }
+
+  get espacoOptions(): Array<{ value: number; label: string; disabled?: boolean }> {
+    if (!this.hasFilteredEspacos) {
+      return [];
+    }
+
+    return this.filteredEspacos.map((espaco) => ({
+      value: espaco.id,
+      label: `${espaco.nome} (${this.tipoLabel(espaco.tipo)})${espaco.ativo ? '' : ' - INATIVO'}`,
+      disabled: !espaco.ativo
+    }));
+  }
+
   get selectedEspaco(): Espaco | undefined {
     return this.filteredEspacos.find((espaco) => espaco.id === this.form.controls.espacoId.value);
   }
@@ -256,7 +281,7 @@ export class ReservasComponent implements OnInit {
       return '';
     }
 
-    return `${this.normalizeTime(this.selectedEspaco.horarioFuncionamentoInicio)} as ${this.normalizeTime(this.selectedEspaco.horarioFuncionamentoFim)}`;
+    return `${this.normalizeTime(this.selectedEspaco.horarioFuncionamentoInicio)} às ${this.normalizeTime(this.selectedEspaco.horarioFuncionamentoFim)}`;
   }
 
   get selectedSlots(): AgendaSlot[] {
@@ -270,7 +295,7 @@ export class ReservasComponent implements OnInit {
 
     const primeiraFaixa = this.selectedSlots[0];
     const ultimaFaixa = this.selectedSlots[this.selectedSlots.length - 1];
-    return `${primeiraFaixa.inicio} as ${ultimaFaixa.fim}`;
+    return `${primeiraFaixa.inicio} às ${ultimaFaixa.fim}`;
   }
 
   get canCreateReservation(): boolean {

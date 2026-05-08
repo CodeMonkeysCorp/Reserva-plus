@@ -6,13 +6,14 @@ import { AdminUser, AdminUserUpdatePayload, UserRole } from '../../core/models';
 import { ApiErrorService } from '../../core/services/api-error.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UsuariosService } from '../../core/services/usuarios.service';
+import { SelectFieldComponent } from '../../shared/ui/select-field/select-field.component';
 
 type FiltroRole = 'TODOS' | UserRole;
 
 @Component({
   selector: 'app-usuarios',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, SelectFieldComponent],
   templateUrl: './usuarios.component.html',
   styleUrl: './usuarios.component.css'
 })
@@ -92,6 +93,13 @@ export class UsuariosComponent implements OnInit {
 
   get canSubmit(): boolean {
     return !this.saving && this.selectedUser !== null;
+  }
+
+  get filtroRoleOptions(): Array<{ value: FiltroRole; label: string }> {
+    return [
+      { value: 'TODOS', label: 'Todos os perfis' },
+      ...this.roleOptions
+    ];
   }
 
   edit(usuario: AdminUser): void {

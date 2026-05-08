@@ -25,10 +25,7 @@
 
       <div>
         <label class="form-label" for="filtroRole">Perfil</label>
-        <select id="filtroRole" class="form-select" [formControl]="filtroForm.controls.role">
-          <option value="TODOS">Todos os perfis</option>
-          <option *ngFor="let role of roleOptions" [value]="role.value">{{ role.label }}</option>
-        </select>
+        <app-select-field [formControl]="filtroForm.controls.role" [options]="filtroRoleOptions"></app-select-field>
       </div>
     </div>
 
@@ -96,9 +93,7 @@
       <form class="form-stack" [formGroup]="form" (ngSubmit)="submit()" novalidate>
         <div>
           <label class="form-label" for="role">Perfil de acesso</label>
-          <select id="role" class="form-select" formControlName="role" [disabled]="!canEditRole">
-            <option *ngFor="let role of roleOptions" [value]="role.value">{{ role.label }}</option>
-          </select>
+          <app-select-field formControlName="role" [options]="roleOptions" [uiDisabled]="!canEditRole"></app-select-field>
           <div class="helper-note" *ngIf="!canEditRole">
             O próprio perfil de administrador não pode ser alterado por esta tela.
           </div>

@@ -12,25 +12,24 @@
       <div class="filters-grid">
         <div class="filters-field">
           <label class="form-label" for="tipo">Tipo de espaço</label>
-          <select id="tipo" class="form-select" formControlName="tipo">
-            <option *ngFor="let tipo of tiposFiltro" [value]="tipo.value">{{ tipo.label }}</option>
-          </select>
+          <app-select-field formControlName="tipo" [options]="tipoOptions"></app-select-field>
         </div>
 
         <div class="filters-field">
           <label class="form-label" for="espacoId">Espaço</label>
-          <select id="espacoId" class="form-select" formControlName="espacoId" [disabled]="!hasFilteredEspacos">
-            <option [value]="0" disabled>{{ hasFilteredEspacos ? 'Selecione um espaço' : 'Nenhum espaço disponível' }}</option>
-            <option *ngFor="let espaco of filteredEspacos" [value]="espaco.id" [disabled]="!espaco.ativo">
-              {{ espaco.nome }} ({{ tipoLabel(espaco.tipo) }}) {{ espaco.ativo ? '' : '- INATIVO' }}
-            </option>
-          </select>
+          <app-select-field
+            formControlName="espacoId"
+            [options]="espacoOptions"
+            [uiDisabled]="!hasFilteredEspacos"
+            [placeholder]="hasFilteredEspacos ? 'Selecione um espaço' : 'Nenhum espaço disponível'"
+            [emptyLabel]="'Nenhum espaço disponível'"
+          ></app-select-field>
           <div class="helper-note" *ngIf="!hasFilteredEspacos">Nenhum espaço encontrado para o tipo selecionado.</div>
         </div>
 
         <div class="filters-field">
           <label class="form-label" for="data">Data</label>
-          <input id="data" type="date" class="form-control" formControlName="data" [min]="minDate" [max]="maxDate" />
+          <app-date-field formControlName="data" [min]="minDate" [max]="maxDate"></app-date-field>
         </div>
       </div>
 

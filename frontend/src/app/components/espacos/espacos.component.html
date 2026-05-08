@@ -1,7 +1,7 @@
 <section class="page-grid">
   <article class="card-soft panel form-panel" #formPanel>
     <h1 class="panel-title">{{ editingId ? 'Editar espaço' : 'Novo espaço' }}</h1>
-    <p class="panel-subtitle">Cadastre quadras e quiosques com descrição clara e horário de funcionamento configurável.</p>
+    <p class="panel-subtitle">Cadastre espaços com descrição clara, tipo configurável e horário de funcionamento definido.</p>
 
     <div class="alert alert-success py-2" *ngIf="successMessage">{{ successMessage }}</div>
     <div class="alert alert-danger py-2" *ngIf="errorMessage">{{ errorMessage }}</div>
@@ -14,9 +14,19 @@
 
       <div>
         <label class="form-label" for="tipo">Tipo</label>
-        <select id="tipo" class="form-select" formControlName="tipo">
-          <option *ngFor="let tipo of tipos" [value]="tipo">{{ tipoLabel(tipo) }}</option>
-        </select>
+        <app-select-field
+          formControlName="tipo"
+          [options]="tipoOptions"
+          placeholder="Selecione o tipo do espaço"
+        ></app-select-field>
+      </div>
+
+      <div *ngIf="isCreatingNewType">
+        <div class="field-meta">
+          <label class="form-label mb-0" for="novoTipo">Novo tipo</label>
+          <span>{{ novoTipoLength }}/60</span>
+        </div>
+        <input id="novoTipo" type="text" class="form-control" formControlName="novoTipo" maxlength="60" placeholder="Ex.: Área gourmet" />
       </div>
 
       <div class="time-row">

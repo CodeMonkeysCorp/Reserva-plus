@@ -1,29 +1,43 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { Espaco, EspacoPayload, EspacoTipo } from '../../core/models';
+import {
+  collectEspacoTipos,
+  CREATE_NEW_ESPACO_TIPO,
+  DEFAULT_ESPACO_TIPOS,
+  formatEspacoTipoLabel,
+  normalizeEspacoTipo
+} from '../../core/espaco-tipo';
 import { ApiErrorService } from '../../core/services/api-error.service';
 import { EspacosService } from '../../core/services/espacos.service';
+import { SelectFieldComponent, SelectFieldOption } from '../../shared/ui/select-field/select-field.component';
+
+type TipoSelectValue = EspacoTipo | typeof CREATE_NEW_ESPACO_TIPO;
 
 @Component({
   selector: 'app-espacos',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, SelectFieldComponent],
   templateUrl: './espacos.component.html',
   styleUrl: './espacos.component.css'
 })
 export class EspacosComponent implements OnInit {
   @ViewChild('formPanel') private readonly formPanel?: ElementRef<HTMLElement>;
 
+  private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
   private readonly espacosService = inject(EspacosService);
   private readonly apiErrorService = inject(ApiErrorService);
 
-  readonly tipos: EspacoTipo[] = ['QUADRA', 'QUIOSQUE'];
+  readonly defaultTipo = DEFAULT_ESPACO_TIPOS[0];
+  readonly createNewTypeValue = CREATE_NEW_ESPACO_TIPO;
   readonly form = this.fb.nonNullable.group({
     nome: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
-    tipo: ['QUADRA' as EspacoTipo, [Validators.required]],
+    tipo: [this.defaultTipo as TipoSelectValue, [Validators.required]],
+    novoTipo: ['', [Validators.maxLength(60)]],
     descricao: ['', [Validators.maxLength(500)]],
     horarioFuncionamentoInicio: ['06:00', [Validators.required]],
     horarioFuncionamentoFim: ['23:00', [Validators.required]]
@@ -39,6 +53,7 @@ export class EspacosComponent implements OnInit {
   errorMessage = '';
 
   ngOnInit(): void {
+    this.observeTipoSelection();
     this.loadEspacos();
   }
 
@@ -64,9 +79,16 @@ export class EspacosComponent implements OnInit {
       return;
     }
 
+    const tipo = this.resolveTipoForSave();
+    if (!tipo) {
+      this.errorMessage = 'Informe o nome do novo tipo.';
+      this.form.controls.novoTipo.markAsTouched();
+      return;
+    }
+
     const payload: EspacoPayload = {
       nome: this.form.controls.nome.value.trim(),
-      tipo: this.form.controls.tipo.value,
+      tipo,
       descricao: this.form.controls.descricao.value.trim() || undefined,
       ativo: true,
       horarioFuncionamentoInicio: horarioInicio,
@@ -101,6 +123,7 @@ export class EspacosComponent implements OnInit {
     this.form.patchValue({
       nome: espaco.nome,
       tipo: espaco.tipo,
+      novoTipo: '',
       descricao: espaco.descricao ?? '',
       horarioFuncionamentoInicio: this.normalizeTime(espaco.horarioFuncionamentoInicio),
       horarioFuncionamentoFim: this.normalizeTime(espaco.horarioFuncionamentoFim)
@@ -112,7 +135,8 @@ export class EspacosComponent implements OnInit {
     this.editingId = null;
     this.form.reset({
       nome: '',
-      tipo: 'QUADRA',
+      tipo: this.defaultTipo,
+      novoTipo: '',
       descricao: '',
       horarioFuncionamentoInicio: '06:00',
       horarioFuncionamentoFim: '23:00'
@@ -164,8 +188,39 @@ export class EspacosComponent implements OnInit {
     return this.form.controls.descricao.value.length;
   }
 
+  get novoTipoLength(): number {
+    return this.form.controls.novoTipo.value.length;
+  }
+
+  get isCreatingNewType(): boolean {
+    return this.form.controls.tipo.value === CREATE_NEW_ESPACO_TIPO;
+  }
+
+  get tipoOptions(): Array<SelectFieldOption<TipoSelectValue>> {
+    const selectedTipo = this.form.controls.tipo.value;
+    const tipos = collectEspacoTipos(
+      [
+        ...this.espacos.map((espaco) => espaco.tipo),
+        selectedTipo === CREATE_NEW_ESPACO_TIPO ? null : selectedTipo
+      ],
+      { includeDefaults: true }
+    );
+
+    return [
+      ...tipos.map((tipo) => ({
+        value: tipo,
+        label: this.tipoLabel(tipo)
+      })),
+      {
+        value: CREATE_NEW_ESPACO_TIPO,
+        label: 'Criar tipo de espaço',
+        variant: 'action'
+      }
+    ];
+  }
+
   tipoLabel(tipo: EspacoTipo): string {
-    return tipo === 'QUADRA' ? 'Quadra' : 'Quiosque';
+    return formatEspacoTipoLabel(tipo);
   }
 
   formatTime(value: string | null | undefined): string {
@@ -187,6 +242,23 @@ export class EspacosComponent implements OnInit {
           this.errorMessage = this.apiErrorService.toMessage(error, 'Falha ao carregar espaços.');
         }
       });
+  }
+
+  private observeTipoSelection(): void {
+    this.form.controls.tipo.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((tipo) => {
+      if (tipo !== CREATE_NEW_ESPACO_TIPO && this.form.controls.novoTipo.value) {
+        this.form.controls.novoTipo.setValue('', { emitEvent: false });
+      }
+    });
+  }
+
+  private resolveTipoForSave(): EspacoTipo | null {
+    if (!this.isCreatingNewType) {
+      return normalizeEspacoTipo(this.form.controls.tipo.value);
+    }
+
+    const novoTipo = normalizeEspacoTipo(this.form.controls.novoTipo.value);
+    return novoTipo || null;
   }
 
   private normalizeTime(value: string | null | undefined): string {

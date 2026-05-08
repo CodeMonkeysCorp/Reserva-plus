@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalTime;
+import java.util.Locale;
 import java.util.List;
 
 @Service
@@ -17,6 +18,7 @@ public class EspacoServiceImpl implements EspacoService {
 
     private static final LocalTime HORARIO_PADRAO_INICIO = LocalTime.of(6, 0);
     private static final LocalTime HORARIO_PADRAO_FIM = LocalTime.of(23, 0);
+    private static final int TIPO_MAX_LENGTH = 60;
 
     private final EspacoRepository espacoRepository;
 
@@ -77,8 +79,8 @@ public class EspacoServiceImpl implements EspacoService {
         validateHorarioFuncionamento(horarioInicio, horarioFim);
 
         espaco.setNome(request.getNome().trim());
-        espaco.setTipo(request.getTipo());
-        espaco.setDescricao(request.getDescricao() != null ? request.getDescricao().trim() : null);
+        espaco.setTipo(normalizeTipo(request.getTipo()));
+        espaco.setDescricao(normalizeDescricao(request.getDescricao()));
         espaco.setAtivo(request.getAtivo() == null || request.getAtivo());
         espaco.setHorarioFuncionamentoInicio(horarioInicio);
         espaco.setHorarioFuncionamentoFim(horarioFim);
@@ -105,6 +107,32 @@ public class EspacoServiceImpl implements EspacoService {
         if (!fim.isAfter(inicio)) {
             throw new BadRequestException("O horario final de funcionamento deve ser maior que o inicial.");
         }
+    }
+
+    private String normalizeTipo(String tipo) {
+        if (tipo == null) {
+            throw new BadRequestException("Selecione o tipo do espaco.");
+        }
+
+        String normalized = tipo.trim().replaceAll("\\s+", " ").toUpperCase(Locale.ROOT);
+        if (normalized.isEmpty()) {
+            throw new BadRequestException("Selecione o tipo do espaco.");
+        }
+
+        if (normalized.length() > TIPO_MAX_LENGTH) {
+            throw new BadRequestException("O tipo do espaco deve ter no maximo 60 caracteres.");
+        }
+
+        return normalized;
+    }
+
+    private String normalizeDescricao(String descricao) {
+        if (descricao == null) {
+            return null;
+        }
+
+        String normalized = descricao.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     private LocalTime resolveHorarioInicio(Espaco espaco) {

@@ -3,8 +3,8 @@ package com.reservaplus.reserva_plus.service;
 import com.reservaplus.reserva_plus.dto.reserva.ReservaCreateRequest;
 import com.reservaplus.reserva_plus.dto.reserva.ReservaResponse;
 import com.reservaplus.reserva_plus.exception.BadRequestException;
+import com.reservaplus.reserva_plus.model.BloqueioHorario;
 import com.reservaplus.reserva_plus.model.Espaco;
-import com.reservaplus.reserva_plus.model.EspacoTipo;
 import com.reservaplus.reserva_plus.model.Reserva;
 import com.reservaplus.reserva_plus.model.ReservaHistorico;
 import com.reservaplus.reserva_plus.model.ReservaStatus;
@@ -24,6 +24,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -148,6 +149,31 @@ class ReservaServiceImplTest {
         verify(reservaHistoricoRepository).save(any(ReservaHistorico.class));
     }
 
+    @Test
+    void agendaDoDiaShouldPreserveRecurringSeriesIdInBlocks() {
+        LocalDate dataAgenda = LocalDate.of(2026, 5, 12);
+        Espaco espaco = buildEspaco();
+
+        BloqueioHorario bloqueio = new BloqueioHorario();
+        bloqueio.setId(55L);
+        bloqueio.setEspaco(espaco);
+        bloqueio.setData(dataAgenda);
+        bloqueio.setHorarioInicio(LocalTime.of(19, 0));
+        bloqueio.setHorarioFim(LocalTime.of(20, 0));
+        bloqueio.setMotivo("Manutencao");
+        bloqueio.setSerieRecorrenciaId("serie-123");
+
+        given(reservaRepository.findByEspacoIdAndDataAndStatusOrderByHorarioInicio(1L, dataAgenda, ReservaStatus.ATIVA))
+                .willReturn(List.of());
+        given(bloqueioHorarioRepository.findByEspacoIdAndDataOrderByHorarioInicio(1L, dataAgenda))
+                .willReturn(List.of(bloqueio));
+
+        var response = reservaService.agendaDoDia(1L, dataAgenda);
+
+        assertEquals(1, response.getBloqueios().size());
+        assertEquals("serie-123", response.getBloqueios().get(0).getSerieRecorrenciaId());
+    }
+
     private ReservaCreateRequest buildRequest(Long espacoId, LocalDate data, LocalTime horarioInicio, LocalTime horarioFim) {
         ReservaCreateRequest request = new ReservaCreateRequest();
         request.setEspacoId(espacoId);
@@ -169,7 +195,7 @@ class ReservaServiceImplTest {
         Espaco espaco = new Espaco();
         espaco.setId(1L);
         espaco.setNome("Quadra Central");
-        espaco.setTipo(EspacoTipo.QUADRA);
+        espaco.setTipo("QUADRA");
         espaco.setAtivo(true);
         espaco.setHorarioFuncionamentoInicio(LocalTime.of(6, 0));
         espaco.setHorarioFuncionamentoFim(LocalTime.of(23, 0));

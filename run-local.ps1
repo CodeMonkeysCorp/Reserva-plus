@@ -1,13 +1,16 @@
 param(
     [switch]$BackendOnly,
-    [switch]$FrontendOnly
+    [switch]$FrontendOnly,
+    [switch]$DatabaseOnly,
+    [switch]$Build
 )
 
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSCommandPath
-$backendDir = Join-Path $repoRoot "backend"
-$frontendDir = Join-Path $repoRoot "frontend"
+$composeFile = Join-Path $repoRoot "compose.yaml"
+$envFile = Join-Path $repoRoot ".env"
+$envExampleFile = Join-Path $repoRoot ".env.example"
 
 function Require-Path {
     param(
@@ -18,57 +21,6 @@ function Require-Path {
     if (-not (Test-Path $Path)) {
         throw "$FriendlyName nao foi encontrado em '$Path'."
     }
-}
-
-function Test-PortInUse {
-    param([int]$Port)
-
-    return [bool](Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
-}
-
-function Get-ListeningProcessIds {
-    param([int]$Port)
-
-    return @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
-        Select-Object -ExpandProperty OwningProcess -Unique)
-}
-
-function Wait-PortReleased {
-    param(
-        [int]$Port,
-        [int]$TimeoutSeconds = 10
-    )
-
-    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-
-    while ((Get-Date) -lt $deadline) {
-        if (-not (Test-PortInUse -Port $Port)) {
-            return
-        }
-
-        Start-Sleep -Milliseconds 250
-    }
-
-    throw "A porta $Port nao foi liberada a tempo."
-}
-
-function Stop-ProcessesOnPort {
-    param([int]$Port)
-
-    $processIds = Get-ListeningProcessIds -Port $Port
-    if ($processIds.Count -eq 0) {
-        return
-    }
-
-    foreach ($processId in $processIds) {
-        $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
-        $processName = if ($process) { $process.ProcessName } else { "PID $processId" }
-
-        Write-Host "Encerrando $processName na porta $Port..." -ForegroundColor Yellow
-        Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
-    }
-
-    Wait-PortReleased -Port $Port
 }
 
 function Require-Command {
@@ -82,89 +34,194 @@ function Require-Command {
     }
 }
 
-function Resolve-MavenCommand {
-    $fromPath = Get-Command "mvn" -ErrorAction SilentlyContinue
-    if ($fromPath) {
-        return $fromPath.Source
+function Resolve-ServiceSelection {
+    $selectedServices = @()
+
+    if ($BackendOnly) {
+        $selectedServices += "backend"
     }
 
-    $candidates = @()
-
-    if ($env:MAVEN_HOME) {
-        $candidates += (Join-Path $env:MAVEN_HOME "bin\mvn.cmd")
+    if ($FrontendOnly) {
+        $selectedServices += "frontend"
     }
 
-    $candidates += (Join-Path $backendDir ".tools\apache-maven-3.9.9\bin\mvn.cmd")
-    $candidates += "C:\Tools\apache-maven-3.9.14\bin\mvn.cmd"
-    $candidates += "C:\Tools\apache-maven-3.9.9\bin\mvn.cmd"
-
-    foreach ($candidate in ($candidates | Select-Object -Unique)) {
-        if ($candidate -and (Test-Path $candidate)) {
-            return $candidate
-        }
+    if ($DatabaseOnly) {
+        $selectedServices += "mysql"
     }
 
-    throw "Maven nao foi encontrado no PATH, no MAVEN_HOME ou na pasta .tools do backend."
+    if ($selectedServices.Count -gt 1) {
+        throw "Use apenas um dos parametros: -BackendOnly, -FrontendOnly ou -DatabaseOnly."
+    }
+
+    if ($selectedServices.Count -eq 0) {
+        return @("mysql", "backend", "frontend")
+    }
+
+    return @($selectedServices)
 }
 
-function Start-InNewWindow {
+function Get-EnvironmentSettings {
+    $settings = @{}
+    $sourceFile = $null
+
+    if (Test-Path $envFile) {
+        $sourceFile = $envFile
+    }
+    elseif (Test-Path $envExampleFile) {
+        $sourceFile = $envExampleFile
+    }
+
+    if (-not $sourceFile) {
+        return $settings
+    }
+
+    foreach ($line in Get-Content $sourceFile) {
+        $trimmed = $line.Trim()
+        if (-not $trimmed -or $trimmed.StartsWith("#")) {
+            continue
+        }
+
+        $separatorIndex = $trimmed.IndexOf("=")
+        if ($separatorIndex -lt 1) {
+            continue
+        }
+
+        $key = $trimmed.Substring(0, $separatorIndex).Trim()
+        $value = $trimmed.Substring($separatorIndex + 1).Trim()
+        $settings[$key] = $value
+    }
+
+    return $settings
+}
+
+function Get-ConfiguredValue {
     param(
-        [string]$Title,
-        [string]$Command
+        [hashtable]$Settings,
+        [string]$Key,
+        [string]$DefaultValue
     )
 
-    $fullCommand = "`$Host.UI.RawUI.WindowTitle = '$Title'; $Command"
-    Start-Process powershell.exe -ArgumentList "-NoExit", "-Command", $fullCommand | Out-Null
+    if ($Settings.ContainsKey($Key) -and $Settings[$Key]) {
+        return $Settings[$Key]
+    }
+
+    return $DefaultValue
 }
 
-if ($BackendOnly -and $FrontendOnly) {
-    throw "Use apenas um dos parametros: -BackendOnly ou -FrontendOnly."
+function Invoke-DockerCompose {
+    param([string[]]$ComposeArgs)
+
+    $dockerArgs = @("compose") + $ComposeArgs
+    & docker @dockerArgs
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Falha ao executar 'docker $($dockerArgs -join ' ')'."
+    }
 }
 
-Require-Path -Path $backendDir -FriendlyName "Diretorio do backend"
-Require-Path -Path $frontendDir -FriendlyName "Diretorio do frontend"
+function Get-ComposeContainerIds {
+    param([string[]]$Services)
 
-$mavenExe = $null
+    $dockerArgs = @("compose", "ps", "-q") + $Services
+    $output = & docker @dockerArgs
 
-if (-not $FrontendOnly) {
-    $mavenExe = Resolve-MavenCommand
+    if ($LASTEXITCODE -ne 0) {
+        throw "Falha ao consultar containers com 'docker $($dockerArgs -join ' ')'."
+    }
+
+    return @($output | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_.Trim() })
 }
 
-if (-not $BackendOnly) {
-    Require-Command -CommandName "npm" -FriendlyName "npm"
+function Restart-ExistingServices {
+    param(
+        [string[]]$Services,
+        [bool]$RestartWholeStack
+    )
+
+    $containerIds = Get-ComposeContainerIds -Services $Services
+    if ($containerIds.Count -eq 0) {
+        return
+    }
+
+    if ($RestartWholeStack) {
+        Write-Host "Stack Docker ja encontrada. Reiniciando antes de subir novamente..." -ForegroundColor Yellow
+        Invoke-DockerCompose -ComposeArgs @("down")
+        return
+    }
+
+    Write-Host "Servicos Docker ja existentes encontrados. Reiniciando os alvos..." -ForegroundColor Yellow
+    Invoke-DockerCompose -ComposeArgs (@("stop") + $Services)
+    Invoke-DockerCompose -ComposeArgs (@("rm", "-f") + $Services)
 }
 
-if (-not (Test-PortInUse -Port 3306)) {
-    throw "A porta 3306 nao esta em uso. Inicie o MySQL do XAMPP e, se for a primeira vez, rode .\scripts\setup-xampp-db.ps1."
+Require-Path -Path $composeFile -FriendlyName "Arquivo compose"
+Require-Command -CommandName "docker" -FriendlyName "Docker"
+
+$services = Resolve-ServiceSelection
+$settings = Get-EnvironmentSettings
+$restartWholeStack = -not ($BackendOnly -or $FrontendOnly -or $DatabaseOnly)
+
+$frontendPort = Get-ConfiguredValue -Settings $settings -Key "FRONTEND_PORT" -DefaultValue "4200"
+$backendPort = Get-ConfiguredValue -Settings $settings -Key "BACKEND_PORT" -DefaultValue "8080"
+$mysqlPort = Get-ConfiguredValue -Settings $settings -Key "MYSQL_PORT" -DefaultValue "3306"
+$mysqlDatabase = Get-ConfiguredValue -Settings $settings -Key "MYSQL_DATABASE" -DefaultValue "reserva_plus"
+$mysqlUser = Get-ConfiguredValue -Settings $settings -Key "MYSQL_USER" -DefaultValue "reserva_app"
+
+Restart-ExistingServices -Services $services -RestartWholeStack $restartWholeStack
+
+$composeArgs = @("up", "-d")
+if ($Build) {
+    $composeArgs += "--build"
 }
 
-if (-not $FrontendOnly) {
-    Stop-ProcessesOnPort -Port 8080
+$composeArgs += $services
 
-    $backendCommand = "Set-Location '$backendDir'; `$env:SPRING_PROFILES_ACTIVE='local'; & '$mavenExe' spring-boot:run"
-    Start-InNewWindow -Title "Reserva+ Backend" -Command $backendCommand
-    Write-Host "Abrindo backend em nova janela..." -ForegroundColor Green
-}
-
-if (-not $BackendOnly) {
-    Stop-ProcessesOnPort -Port 4200
-
-    $frontendCommand = "Set-Location '$frontendDir'; npm start"
-    Start-InNewWindow -Title "Reserva+ Frontend" -Command $frontendCommand
-    Write-Host "Abrindo frontend em nova janela..." -ForegroundColor Green
-}
+Write-Host "Subindo servicos Docker..." -ForegroundColor Green
+Invoke-DockerCompose -ComposeArgs $composeArgs
 
 Write-Host ""
+Write-Host "Status da stack:" -ForegroundColor Cyan
+Invoke-DockerCompose -ComposeArgs @("ps")
+
+Write-Host ""
+
+if ($DatabaseOnly) {
+    Write-Host "Banco Docker em execucao:" -ForegroundColor Cyan
+    Write-Host "Host:     127.0.0.1"
+    Write-Host "Porta:    $mysqlPort"
+    Write-Host "Banco:    $mysqlDatabase"
+    Write-Host "Usuario:  $mysqlUser"
+    Write-Host ""
+    Write-Host "Proximo passo: rode o backend manualmente ou use .\run-local.ps1 para subir a stack completa." -ForegroundColor DarkGray
+    Write-Host "Parar banco: .\stop-local.ps1 -DatabaseOnly" -ForegroundColor DarkGray
+    return
+}
+
+if ($BackendOnly) {
+    Write-Host "Backend Docker em execucao:" -ForegroundColor Cyan
+    Write-Host "Backend:  http://localhost:$backendPort"
+    Write-Host "API:      http://localhost:$backendPort/api"
+    Write-Host "Health:   http://localhost:$backendPort/actuator/health"
+    Write-Host "Banco:    127.0.0.1:$mysqlPort ($mysqlDatabase)"
+    Write-Host ""
+    Write-Host "Parar backend: .\stop-local.ps1 -BackendOnly" -ForegroundColor DarkGray
+    return
+}
+
 Write-Host "URLs do projeto:" -ForegroundColor Cyan
-Write-Host "Frontend: http://localhost:4200"
-Write-Host "Backend:  http://localhost:8080"
-Write-Host "API:      http://localhost:8080/api"
-Write-Host "Health:   http://localhost:8080/actuator/health"
+Write-Host "Frontend: http://localhost:$frontendPort"
+Write-Host "Backend:  http://localhost:$backendPort"
+Write-Host "API:      http://localhost:$backendPort/api"
+Write-Host "Health:   http://localhost:$backendPort/actuator/health"
 Write-Host ""
-Write-Host "Banco local esperado:" -ForegroundColor Cyan
+Write-Host "Banco Docker:" -ForegroundColor Cyan
 Write-Host "Host:     127.0.0.1"
-Write-Host "Porta:    3306"
-Write-Host "Banco:    reserva_plus"
-Write-Host "Usuario:  reserva_app"
+Write-Host "Porta:    $mysqlPort"
+Write-Host "Banco:    $mysqlDatabase"
+Write-Host "Usuario:  $mysqlUser"
 Write-Host ""
+Write-Host "Se voce alterou codigo do backend/frontend, rode com rebuild: .\run-local.ps1 -Build" -ForegroundColor DarkGray
+if ($FrontendOnly) {
+    Write-Host "Observacao: ao subir apenas o frontend, o Docker Compose tambem sobe backend e banco como dependencias." -ForegroundColor DarkGray
+}
 Write-Host "Parar tudo: .\stop-local.ps1" -ForegroundColor DarkGray

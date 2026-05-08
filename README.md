@@ -31,7 +31,7 @@ Administradores também podem cadastrar espaços e controlar bloqueios de horár
 - Frontend: Angular 17
 - Backend: Spring Boot 3.3
 - Java: 17+
-- Banco: MySQL / MariaDB
+- Banco: MySQL 8
 - Autenticação: Spring Security + JWT
 
 ## Funcionalidades
@@ -48,26 +48,22 @@ Administradores também podem cadastrar espaços e controlar bloqueios de horár
 
 - `frontend/`: interface web
 - `backend/`: API e regras de negócio
-- `scripts/setup-xampp-db.ps1`: configura o banco local no XAMPP
-- `run-local.ps1`: abre backend e frontend para desenvolvimento local
-- `compose.yaml`: sobe um MySQL local via Docker
+- `run-local.ps1`: sobe a stack local via Docker
+- `stop-local.ps1`: para a stack local via Docker
+- `compose.yaml`: sobe frontend, backend e MySQL via Docker
 
 ## Requisitos
 
-### Para rodar com XAMPP
-
-- Java 17 ou superior
-- Maven 3.9+
-- Node.js e npm
-- XAMPP com MySQL/MariaDB
-- PowerShell
-
 ### Para rodar com Docker
 
+- Docker Desktop
+
+### Para rodar backend/frontend manualmente
+
 - Java 17 ou superior
 - Maven 3.9+
 - Node.js e npm
-- Docker Desktop
+- PowerShell
 
 ## Portas Padrão
 
@@ -75,66 +71,69 @@ Administradores também podem cadastrar espaços e controlar bloqueios de horár
 - backend: `8080`
 - banco: `3306`
 
-## Rodando Local com XAMPP
+## Rodando com Docker
 
-Esse é o caminho mais simples para o projeto hoje.
+Esse eh o caminho padrao do projeto agora.
 
-### 1. Ligue o MySQL no XAMPP
-
-Abra o XAMPP Control Panel e inicie o serviço `MySQL`.
-
-### 2. Configure o banco local
+### 1. Crie o arquivo `.env`
 
 Na raiz do projeto:
 
 ```powershell
-.\scripts\setup-xampp-db.ps1
+Copy-Item .env.example .env
 ```
 
-Esse script:
-
-- cria o banco `reserva_plus`
-- cria o usuário `reserva_app`
-- usa a senha `reserva123`
-
-Observação:
-
-- em alguns ambientes XAMPP/MariaDB, grants por banco podem ficar inconsistentes por causa do mecanismo `Aria`
-- por isso, o script concede acesso global ao usuário `reserva_app`
-- isso é apenas para desenvolvimento local
-
-### 3. Suba o projeto
-
-Na raiz do projeto:
+### 2. Suba a stack
 
 ```powershell
-.\run-local.ps1
+.\run-local.ps1 -Build
 ```
 
-Esse comando:
+Esse comando sobe:
 
-- abre o backend em uma janela
-- abre o frontend em outra janela
-- usa o profile Spring `local`
+- frontend Angular servido por Nginx
+- backend Spring Boot
+- MySQL 8.4
 
-### 4. Acesse
+Voce tambem pode usar o Compose diretamente:
+
+```powershell
+docker compose up --build -d
+```
+
+Se a stack ja estiver rodando, o `run-local.ps1` derruba e sobe novamente os servicos alvo automaticamente.
+Quando houver mudanca de codigo no backend ou frontend, prefira usar `-Build` para reconstruir as imagens locais antes de subir.
+
+### 3. Acesse
 
 - frontend: `http://localhost:4200`
 - backend: `http://localhost:8080`
 - healthcheck: `http://localhost:8080/actuator/health`
 
-### Comandos úteis
+### 4. Comandos uteis
 
-Subir só o backend:
+Parar toda a stack:
+
+```powershell
+.\stop-local.ps1
+```
+
+Subir apenas o banco:
+
+```powershell
+.\run-local.ps1 -DatabaseOnly
+```
+
+Subir apenas backend e banco:
 
 ```powershell
 .\run-local.ps1 -BackendOnly
 ```
 
-Subir só o frontend:
+Ver logs:
 
 ```powershell
-.\run-local.ps1 -FrontendOnly
+docker compose logs -f
 ```
 
 ## Backend Manual com Profile Local
@@ -142,6 +141,7 @@ Subir só o frontend:
 Se quiser subir o backend manualmente:
 
 ```powershell
+.\run-local.ps1 -DatabaseOnly
 cd .\backend
 $env:SPRING_PROFILES_ACTIVE="local"
 mvn spring-boot:run
@@ -158,40 +158,11 @@ Esse profile usa:
 - usuário: `reserva_app`
 - senha: `reserva123`
 
+Esse fluxo usa o MySQL publicado pelo Docker na porta `3306`.
+
 ## Frontend Manual
 
 Para subir apenas o frontend:
-
-```powershell
-cd .\frontend
-npm install
-npm start
-```
-
-## Rodando o Banco com Docker
-
-Se preferir padronizar o banco em vez de usar XAMPP, existe um `compose.yaml` na raiz.
-
-### 1. Crie o arquivo `.env`
-
-```powershell
-Copy-Item .env.example .env
-```
-
-### 2. Suba o MySQL
-
-```powershell
-docker compose up -d
-```
-
-### 3. Suba o backend
-
-```powershell
-cd .\backend
-mvn spring-boot:run
-```
-
-### 4. Suba o frontend
 
 ```powershell
 cd .\frontend
@@ -207,16 +178,21 @@ O backend suporta estas variáveis:
 - `DB_USER`
 - `DB_PASSWORD`
 - `SERVER_PORT`
+- `BACKEND_PORT`
+- `FRONTEND_PORT`
 - `JWT_SECRET`
 - `JWT_EXPIRATION_MS`
 - `APP_ADMIN_NAME`
 - `APP_ADMIN_EMAIL`
 - `APP_ADMIN_PASSWORD`
+- `RESERVA_CONCLUSAO_CRON`
+- `RESERVA_CONCLUSAO_ZONE`
 
 Sem sobrescrever nada:
 
-- o setup padrão do Docker usa `reserva / reserva123`
-- o setup local com XAMPP usa o profile `local`
+- o setup padrão do Docker usa `reserva_app / reserva123`
+- o frontend Docker consome a API por proxy interno em `/api`
+- o profile `local` continua disponivel para rodar o backend manualmente contra o MySQL do Docker
 
 ## Credenciais Iniciais
 
@@ -276,12 +252,30 @@ Get-NetTCPConnection -LocalPort 8080 -State Listen
 
 Se o frontend já estiver aberto, o Angular pode sugerir outra porta.
 
-### Banco negando acesso no XAMPP
+### Porta 3306 em uso
 
-Se aparecer erro de acesso ao banco, rode novamente:
+Se o MySQL do Docker nao subir, provavelmente ja existe outro banco ocupando a porta `3306`.
+
+Para verificar:
 
 ```powershell
-.\scripts\setup-xampp-db.ps1
+Get-NetTCPConnection -LocalPort 3306 -State Listen
+```
+
+Para encerrar a stack atual:
+
+```powershell
+.\stop-local.ps1
+```
+
+Se o processo nao for desta stack, libere a porta manualmente ou altere `MYSQL_PORT` no `.env`.
+
+### Status dos containers
+
+Para verificar rapidamente o estado da stack:
+
+```powershell
+docker compose ps
 ```
 
 ### Healthcheck
@@ -302,7 +296,7 @@ Resposta esperada:
 
 - o backend usa `ddl-auto: update`, então as tabelas são criadas e ajustadas automaticamente
 - o projeto foi preparado para desenvolvimento local em Windows com PowerShell
-- o Docker continua disponível como opção para padronizar o banco entre máquinas
+- o Docker eh o ambiente padrao de desenvolvimento local
 
 ## Documentação do Projeto
 
@@ -376,7 +370,7 @@ Requisitos não funcionais:
 
 Arquitetura client-server:
 
-`Angular (Frontend SPA) -> Spring Boot (Backend REST API) -> MySQL/MariaDB (Banco de Dados)`
+`Angular (Frontend SPA) -> Spring Boot (Backend REST API) -> MySQL (Banco de Dados)`
 
 Padrão arquitetural:
 
@@ -434,7 +428,7 @@ Spring Security + JWT:
 - autenticação stateless
 - controle de acesso por perfil
 
-MySQL / MariaDB:
+MySQL:
 
 - banco relacional
 - suporte a transações

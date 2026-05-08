@@ -22,31 +22,22 @@
     <form class="filters-grid" [formGroup]="form">
       <div>
         <label class="form-label" for="filtroTipo">Tipo de espaço</label>
-        <select id="filtroTipo" class="form-select" formControlName="tipo">
-          <option *ngFor="let tipo of tiposFiltro" [value]="tipo.value">{{ tipo.label }}</option>
-        </select>
+        <app-select-field formControlName="tipo" [options]="tipoOptions"></app-select-field>
       </div>
 
       <div>
         <label class="form-label" for="filtroEspaco">Espaço</label>
-        <select id="filtroEspaco" class="form-select" formControlName="espacoId">
-          <option [value]="0">Todos os espaços</option>
-          <option *ngFor="let espaco of filteredEspacos" [value]="espaco.id">
-            {{ espaco.nome }}
-          </option>
-        </select>
+        <app-select-field formControlName="espacoId" [options]="espacoOptions"></app-select-field>
       </div>
 
       <div>
         <label class="form-label" for="filtroStatus">Status</label>
-        <select id="filtroStatus" class="form-select" formControlName="status">
-          <option *ngFor="let status of statusFiltro" [value]="status.value">{{ status.label }}</option>
-        </select>
+        <app-select-field formControlName="status" [options]="statusOptions"></app-select-field>
       </div>
 
       <div>
         <label class="form-label" for="filtroData">Data</label>
-        <input id="filtroData" type="date" class="form-control" formControlName="data" />
+        <app-date-field formControlName="data" [clearable]="true"></app-date-field>
       </div>
     </form>
   </article>

@@ -1,14 +1,12 @@
 package com.reservaplus.reserva_plus.dto.espaco;
 
-import com.reservaplus.reserva_plus.model.EspacoTipo;
-
 import java.time.LocalTime;
 
 public class EspacoResponse {
 
     private Long id;
     private String nome;
-    private EspacoTipo tipo;
+    private String tipo;
     private String descricao;
     private boolean ativo;
     private LocalTime horarioFuncionamentoInicio;
@@ -30,11 +28,11 @@ public class EspacoResponse {
         this.nome = nome;
     }
 
-    public EspacoTipo getTipo() {
+    public String getTipo() {
         return tipo;
     }
 
-    public void setTipo(EspacoTipo tipo) {
+    public void setTipo(String tipo) {
         this.tipo = tipo;
     }
 

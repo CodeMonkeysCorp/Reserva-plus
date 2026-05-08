@@ -4,10 +4,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { AgendaDia, Bloqueio, BloqueioPayload, Espaco, EspacoTipo } from '../../core/models';
+import { formatEspacoTipoLabel } from '../../core/espaco-tipo';
 import { ApiErrorService } from '../../core/services/api-error.service';
 import { BloqueiosService } from '../../core/services/bloqueios.service';
 import { EspacosService } from '../../core/services/espacos.service';
 import { ReservasService } from '../../core/services/reservas.service';
+import { DateFieldComponent } from '../../shared/ui/date-field/date-field.component';
+import { SelectFieldComponent } from '../../shared/ui/select-field/select-field.component';
 
 type AgendaSlotStatus = 'LIVRE' | 'RESERVADO' | 'BLOQUEADO';
 
@@ -19,8 +22,8 @@ interface AgendaSlot {
   detalhe: string;
 }
 
-interface PendingDeleteState {
-  bloqueio: Bloqueio;
+interface DeleteActionState {
+  bloqueioId: number;
   removerSerie: boolean;
 }
 
@@ -31,7 +34,7 @@ const DEFAULT_CLOSING_MINUTES = 23 * 60;
 @Component({
   selector: 'app-bloqueios',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, SelectFieldComponent, DateFieldComponent],
   templateUrl: './bloqueios.component.html',
   styleUrl: './bloqueios.component.css'
 })
@@ -56,12 +59,11 @@ export class BloqueiosComponent implements OnInit {
   agenda: AgendaDia | null = null;
   agendaSlots: AgendaSlot[] = [];
   selectedSlotIndexes: number[] = [];
-  pendingDelete: PendingDeleteState | null = null;
+  deletingAction: DeleteActionState | null = null;
 
   loadingEspacos = true;
   loadingAgenda = false;
   saving = false;
-  deleting = false;
   readonly minDate = this.today();
 
   successMessage = '';
@@ -187,38 +189,22 @@ export class BloqueiosComponent implements OnInit {
     return 'Reservado';
   }
 
-  requestRemoveBloqueio(bloqueio: Bloqueio, removerSerie = false): void {
-    this.successMessage = '';
-    this.errorMessage = '';
-    this.pendingDelete = { bloqueio, removerSerie };
-  }
-
-  cancelRemoveBloqueio(): void {
-    if (this.deleting) {
-      return;
-    }
-
-    this.pendingDelete = null;
-  }
-
-  confirmRemoveBloqueio(): void {
-    const pendingDelete = this.pendingDelete;
-    if (!pendingDelete) {
+  removeBloqueio(bloqueio: Bloqueio, removerSerie = false): void {
+    if (this.deletingAction) {
       return;
     }
 
     this.successMessage = '';
     this.errorMessage = '';
-    this.deleting = true;
+    this.deletingAction = { bloqueioId: bloqueio.id, removerSerie };
     this.bloqueiosService
-      .delete(pendingDelete.bloqueio.id, pendingDelete.removerSerie)
-      .pipe(finalize(() => (this.deleting = false)))
+      .delete(bloqueio.id, removerSerie)
+      .pipe(finalize(() => (this.deletingAction = null)))
       .subscribe({
         next: () => {
-          this.successMessage = pendingDelete.removerSerie
-            ? 'Série de bloqueios removida com sucesso.'
+          this.successMessage = removerSerie
+            ? 'Todos os bloqueios da rotina foram removidos com sucesso.'
             : 'Bloqueio removido com sucesso.';
-          this.pendingDelete = null;
           this.loadAgenda();
         },
         error: (error: unknown) => {
@@ -227,8 +213,23 @@ export class BloqueiosComponent implements OnInit {
       });
   }
 
+  isDeleting(bloqueio: Bloqueio, removerSerie = false): boolean {
+    return this.deletingAction?.bloqueioId === bloqueio.id && this.deletingAction.removerSerie === removerSerie;
+  }
+
+  get deleting(): boolean {
+    return this.deletingAction !== null;
+  }
+
   get selectedEspaco(): Espaco | undefined {
     return this.espacos.find((espaco) => espaco.id === this.form.controls.espacoId.value);
+  }
+
+  get espacoOptions(): Array<{ value: number; label: string }> {
+    return this.espacos.map((espaco) => ({
+      value: espaco.id,
+      label: `${espaco.nome} (${this.tipoLabel(espaco.tipo)})`
+    }));
   }
 
   get selectedEspacoTipoLabel(): string {
@@ -295,7 +296,7 @@ export class BloqueiosComponent implements OnInit {
   }
 
   tipoLabel(tipo: EspacoTipo): string {
-    return tipo === 'QUADRA' ? 'Quadra' : 'Quiosque';
+    return formatEspacoTipoLabel(tipo);
   }
 
   isRecurringBlock(bloqueio: Bloqueio): boolean {
@@ -367,7 +368,6 @@ export class BloqueiosComponent implements OnInit {
     const espacoId = this.form.controls.espacoId.value;
     const data = this.form.controls.data.value;
 
-    this.pendingDelete = null;
     this.agenda = null;
     this.agendaSlots = [];
     this.bloqueios = [];

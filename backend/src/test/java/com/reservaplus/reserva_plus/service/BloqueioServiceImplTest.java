@@ -6,7 +6,6 @@ import com.reservaplus.reserva_plus.exception.BadRequestException;
 import com.reservaplus.reserva_plus.exception.ConflictException;
 import com.reservaplus.reserva_plus.model.BloqueioHorario;
 import com.reservaplus.reserva_plus.model.Espaco;
-import com.reservaplus.reserva_plus.model.EspacoTipo;
 import com.reservaplus.reserva_plus.model.ReservaStatus;
 import com.reservaplus.reserva_plus.repository.BloqueioHorarioRepository;
 import com.reservaplus.reserva_plus.repository.EspacoRepository;
@@ -166,7 +165,7 @@ class BloqueioServiceImplTest {
         Espaco espaco = new Espaco();
         espaco.setId(1L);
         espaco.setNome("Quadra Central");
-        espaco.setTipo(EspacoTipo.QUADRA);
+        espaco.setTipo("QUADRA");
         espaco.setAtivo(true);
         espaco.setHorarioFuncionamentoInicio(LocalTime.of(6, 0));
         espaco.setHorarioFuncionamentoFim(LocalTime.of(23, 0));
