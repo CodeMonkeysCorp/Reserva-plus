@@ -1,11 +1,18 @@
-<section class="page-grid usuarios-page">
+<section class="page-grid usuarios-page page-stack">
+  <article class="card-soft page-hero">
+    <div class="page-hero-copy">
+      <h1 class="page-hero-title">Gestão de usuários</h1>
+      <p class="page-hero-subtitle">Gerencie acessos, filtre perfis e escolha um usuário para editar sem sair da página.</p>
+    </div>
+  </article>
+
   <article class="card-soft panel list-panel">
-    <div class="list-head">
-      <div>
-        <h1 class="panel-title">Gestão de usuários</h1>
-        <p class="panel-subtitle">Gerencie acessos, filtre perfis e escolha um usuário para editar sem sair da página.</p>
+    <div class="list-head section-head">
+      <div class="section-copy">
+        <h2 class="section-title">Usuários cadastrados</h2>
+        <p class="section-subtitle">Filtre por nome ou perfil e abra a edição quando precisar ajustar acessos.</p>
       </div>
-      <span class="results-count">{{ resultsLabel }}</span>
+      <span class="section-meta results-count">{{ resultsLabel }}</span>
     </div>
 
     <div class="alert alert-success py-2" *ngIf="successMessage">{{ successMessage }}</div>
@@ -67,15 +74,14 @@
     </div>
   </article>
 
-  <article class="card-soft panel form-panel" #editorPanel>
-    <h2 class="panel-title">{{ selectedUser ? 'Editar acesso' : 'Edição de acesso' }}</h2>
-    <p class="panel-subtitle">
-      {{ selectedUser
-        ? 'Ajuste perfil e redefina senha sem depender de envio por e-mail.'
-        : 'Selecione um usuário na tabela acima para alterar permissões e redefinir senha.' }}
-    </p>
+  <article class="card-soft panel form-panel" #editorPanel *ngIf="selectedUser as usuario">
+    <div class="section-head">
+      <div class="section-copy">
+        <h2 class="section-title">Editar acesso</h2>
+        <p class="section-subtitle">Ajuste perfil e redefina senha sem depender de envio por e-mail.</p>
+      </div>
+    </div>
 
-    <ng-container *ngIf="selectedUser as usuario; else emptySelection">
       <div class="user-summary">
         <div>
           <strong>{{ usuario.nome }}</strong>
@@ -132,13 +138,5 @@
           </button>
         </div>
       </form>
-    </ng-container>
-
-    <ng-template #emptySelection>
-      <div class="empty-selection">
-        <h2>Selecione um usuário</h2>
-        <p>Escolha um cadastro na tabela acima para gerenciar permissões e redefinir senha.</p>
-      </div>
-    </ng-template>
   </article>
 </section>

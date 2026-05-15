@@ -1,44 +1,90 @@
-<section class="dashboard">
-  <header class="card-soft hero-card">
-    <h1>Olá, {{ nomeUsuario }}.</h1>
-    <p>{{ heroDescription }}</p>
+<section class="home-shell">
+  <header class="card-soft home-hero">
+    <div class="hero-copy">
+      <h1>Olá, {{ nomeUsuario }}.</h1>
+      <p>{{ heroDescription }}</p>
+    </div>
+
   </header>
 
   <div class="alert alert-danger" *ngIf="errorMessage">{{ errorMessage }}</div>
 
   <div *ngIf="loading" class="card-soft loading-card">
-    Carregando indicadores...
+    Carregando conteúdo...
   </div>
 
-  <div *ngIf="!loading" class="stats-grid" [class.user-grid]="!isAdmin">
-    <article class="card-soft stat-card" *ngIf="isAdmin">
-      <span class="stat-label">Espaços cadastrados</span>
-      <strong class="stat-value">{{ totalEspacos }}</strong>
-    </article>
+  <ng-container *ngIf="!loading">
+    <section class="home-highlight-grid">
+      <article class="card-soft info-card">
+        <span class="info-card-label">Próxima reserva</span>
 
-    <article class="card-soft stat-card">
-      <span class="stat-label">Reservas ativas</span>
-      <strong class="stat-value">{{ reservasAtivas }}</strong>
-    </article>
+        <div *ngIf="proximaReserva; else semReserva">
+          <strong class="info-card-title">{{ proximaReserva.espacoNome }}</strong>
+          <p class="mb-0">
+            {{ proximaReserva.data | date: 'dd/MM/yyyy' }} das
+            {{ proximaReserva.horarioInicio | slice:0:5 }} às {{ proximaReserva.horarioFim | slice:0:5 }}
+          </p>
+        </div>
 
-    <article class="card-soft stat-card">
-      <span class="stat-label">Reservas canceladas</span>
-      <strong class="stat-value">{{ reservasCanceladas }}</strong>
-    </article>
-  </div>
+        <ng-template #semReserva>
+          <strong class="info-card-title">Nenhuma reserva futura</strong>
+          <p class="mb-0">Quando houver uma próxima reserva, ela aparecerá aqui.</p>
+        </ng-template>
+      </article>
 
-  <section class="card-soft next-card" *ngIf="!loading">
-    <h2>Próxima reserva</h2>
-    <div *ngIf="proximaReserva; else semReserva">
-      <p class="mb-1"><strong>{{ proximaReserva.espacoNome }}</strong></p>
-      <p class="mb-0">
-        {{ proximaReserva.data | date: 'dd/MM/yyyy' }} das
-        {{ proximaReserva.horarioInicio | slice:0:5 }} às {{ proximaReserva.horarioFim | slice:0:5 }}
-      </p>
-    </div>
-    <ng-template #semReserva>
-      <p class="mb-0">Nenhuma reserva futura registrada.</p>
+      <article class="card-soft info-card">
+        <span class="info-card-label">Tipos disponíveis</span>
+        <strong class="info-card-title">Ambientes para diferentes momentos</strong>
+
+        <div class="type-chip-list" *ngIf="tiposDisponiveis.length; else semTipo">
+          <span class="type-chip" *ngFor="let tipo of tiposDisponiveis">{{ tipo }}</span>
+        </div>
+
+        <ng-template #semTipo>
+          <p class="mb-0">Os tipos aparecerão aqui assim que os espaços forem cadastrados.</p>
+        </ng-template>
+      </article>
+    </section>
+
+    <section class="section-head">
+      <div>
+        <span class="section-kicker">Sugestões</span>
+        <h2>Espaços em destaque</h2>
+      </div>
+    </section>
+
+    <section class="space-grid" *ngIf="featuredEspacos.length; else semEspacos">
+      <article class="card-soft space-card" *ngFor="let espaco of featuredEspacos; trackBy: trackByEspacoId">
+        <div class="space-card-media" [class.has-image]="!!espaco.imagemUrl">
+          <img *ngIf="espaco.imagemUrl" [src]="espaco.imagemUrl" [alt]="'Imagem de ' + espaco.nome" />
+          <div class="space-card-placeholder" *ngIf="!espaco.imagemUrl">Reserva+</div>
+        </div>
+
+        <div class="space-card-body">
+          <span class="space-card-type">{{ formatTipo(espaco.tipo) }}</span>
+          <h3>{{ espaco.nome }}</h3>
+          <p>{{ espaco.descricao || 'Espaço disponível para reservas com agenda organizada no sistema.' }}</p>
+
+          <div class="space-card-meta">
+            <span class="space-card-hours">Funcionamento: <br>{{ formatHorario(espaco) }}</span>
+            <a
+              class="space-card-cta"
+              routerLink="/reservas"
+              [queryParams]="{ espacoId: espaco.id }"
+              [attr.aria-label]="'Reservar ' + espaco.nome"
+            >
+              Reservar agora
+            </a>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <ng-template #semEspacos>
+      <article class="card-soft empty-card">
+        <h2>Nenhum espaço disponível por enquanto</h2>
+        <p class="mb-0">Quando os ambientes forem cadastrados, eles aparecerão aqui com imagem, tipo e horário de funcionamento.</p>
+      </article>
     </ng-template>
-  </section>
-
+  </ng-container>
 </section>

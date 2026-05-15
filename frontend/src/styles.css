@@ -10,6 +10,11 @@
   --muted: #5b7468;
   --border-soft: rgba(29, 43, 36, 0.12);
   --surface-soft: #f7fbf8;
+  --field-border: rgba(36, 73, 61, 0.18);
+  --field-border-strong: rgba(20, 95, 156, 0.34);
+  --field-surface: linear-gradient(180deg, #ffffff 0%, #f8fcfa 100%);
+  --field-shadow: 0 0 0 1px rgba(20, 95, 156, 0.14), 0 10px 24px rgba(20, 95, 156, 0.1);
+  --field-min-height: 3.5rem;
 }
 
 * {
@@ -39,6 +44,81 @@ body {
   box-shadow: 0 8px 28px rgba(10, 30, 23, 0.08);
 }
 
+.page-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.page-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.45rem 1.5rem;
+  background:
+    radial-gradient(circle at top right, rgba(20, 95, 156, 0.22), transparent 34%),
+    linear-gradient(135deg, rgba(15, 107, 77, 0.14), rgba(255, 255, 255, 0.96));
+}
+
+.page-hero-copy {
+  min-width: 0;
+}
+
+.page-hero-title {
+  margin: 0;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: clamp(2.2rem, 4vw, 3rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  color: #16392c;
+}
+
+.page-hero-subtitle {
+  margin: 0.7rem 0 0;
+  color: #526b60;
+  font-size: 1.05rem;
+}
+
+.page-hero-meta,
+.section-meta {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.42rem 0.85rem;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(29, 43, 36, 0.08);
+  color: #47695a;
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.section-title {
+  margin: 0;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-size: clamp(1.45rem, 2.1vw, 1.95rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: #16392c;
+}
+
+.section-subtitle {
+  margin: 0.38rem 0 0;
+  color: var(--muted);
+}
+
+.section-copy {
+  min-width: 0;
+}
+
 .btn-brand {
   background-color: var(--primary);
   border-color: var(--primary);
@@ -56,7 +136,7 @@ body {
 
 .form-control,
 .form-select {
-  min-height: 3rem;
+  min-height: var(--field-min-height);
   border-radius: 12px;
   border: 1px solid var(--border-soft);
   background: linear-gradient(180deg, #ffffff, #fbfdfc);
@@ -79,7 +159,7 @@ body {
 
 textarea.form-control {
   min-height: 7rem;
-  resize: vertical;
+  resize: none;
 }
 
 .form-control::placeholder,
@@ -114,4 +194,21 @@ input[type="time"] {
 
 .table tbody td {
   border-bottom-color: rgba(29, 43, 36, 0.08);
+}
+
+@media (max-width: 760px) {
+  .page-hero,
+  .section-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-hero {
+    padding: 1.2rem 1.15rem;
+  }
+
+  .page-hero-meta,
+  .section-meta {
+    white-space: normal;
+  }
 }

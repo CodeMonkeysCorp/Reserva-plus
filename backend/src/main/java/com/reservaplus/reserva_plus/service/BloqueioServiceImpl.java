@@ -1,6 +1,7 @@
 package com.reservaplus.reserva_plus.service;
 
 import com.reservaplus.reserva_plus.dto.bloqueio.BloqueioCreateRequest;
+import com.reservaplus.reserva_plus.dto.bloqueio.BloqueioRecorrenteResponse;
 import com.reservaplus.reserva_plus.dto.bloqueio.BloqueioResponse;
 import com.reservaplus.reserva_plus.exception.BadRequestException;
 import com.reservaplus.reserva_plus.exception.ConflictException;
@@ -18,14 +19,14 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 public class BloqueioServiceImpl implements BloqueioService {
 
-    private static final LocalTime HORARIO_PADRAO_INICIO = LocalTime.of(6, 0);
-    private static final LocalTime HORARIO_PADRAO_FIM = LocalTime.of(23, 0);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final BloqueioHorarioRepository bloqueioHorarioRepository;
@@ -45,14 +46,31 @@ public class BloqueioServiceImpl implements BloqueioService {
     @Override
     @Transactional
     public BloqueioResponse create(BloqueioCreateRequest request) {
-        validateHorario(request.getHorarioInicio(), request.getHorarioFim());
+        LocalDate hoje = nowDate();
+        LocalTime agora = nowTime();
 
-        Espaco espaco = espacoRepository.findById(request.getEspacoId())
-                .orElseThrow(() -> new NotFoundException("Espaco nao encontrado."));
-
-        validateHorarioFuncionamento(espaco, request.getHorarioInicio(), request.getHorarioFim());
+        HorarioFuncionamentoSupport.validateHoraCheia(
+                request.getHorarioInicio(),
+                request.getHorarioFim(),
+                "Os bloqueios devem ser definidos em hora cheia.",
+                "Horário final deve ser maior que o horário inicial."
+        );
 
         List<LocalDate> datas = resolveDatasDaSerie(request);
+        for (LocalDate data : datas) {
+            validateDataBloqueio(data, request.getHorarioFim(), hoje, agora);
+        }
+
+        Espaco espaco = espacoRepository.findById(request.getEspacoId())
+                .orElseThrow(() -> new NotFoundException("Espaço não encontrado."));
+
+        HorarioFuncionamentoSupport.validateDentroDoHorarioFuncionamento(
+                espaco,
+                request.getHorarioInicio(),
+                request.getHorarioFim(),
+                "O bloqueio precisa estar dentro do horário de funcionamento do espaço: %s às %s."
+        );
+
         boolean recorrencia = datas.size() > 1;
         String serieRecorrenciaId = recorrencia ? UUID.randomUUID().toString() : null;
         List<BloqueioHorario> bloqueios = new ArrayList<>();
@@ -70,7 +88,7 @@ public class BloqueioServiceImpl implements BloqueioService {
             bloqueios.add(bloqueio);
         }
 
-        return toResponse(bloqueioHorarioRepository.saveAll(bloqueios).get(0));
+        return ReservaBloqueioResponseSupport.toBloqueioResponse(bloqueioHorarioRepository.saveAll(bloqueios).get(0));
     }
 
     @Override
@@ -78,7 +96,26 @@ public class BloqueioServiceImpl implements BloqueioService {
     public List<BloqueioResponse> findByEspacoAndData(Long espacoId, LocalDate data) {
         return bloqueioHorarioRepository.findByEspacoIdAndDataOrderByHorarioInicio(espacoId, data)
                 .stream()
-                .map(this::toResponse)
+                .map(ReservaBloqueioResponseSupport::toBloqueioResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BloqueioRecorrenteResponse> findRecurringByEspaco(Long espacoId) {
+        Map<String, List<BloqueioHorario>> series = new LinkedHashMap<>();
+
+        for (BloqueioHorario bloqueio : bloqueioHorarioRepository.findByEspacoIdAndSerieRecorrenciaIdIsNotNullOrderByDataAscHorarioInicioAsc(espacoId)) {
+            String serieRecorrenciaId = bloqueio.getSerieRecorrenciaId();
+            if (serieRecorrenciaId == null || serieRecorrenciaId.isBlank()) {
+                continue;
+            }
+
+            series.computeIfAbsent(serieRecorrenciaId, ignored -> new ArrayList<>()).add(bloqueio);
+        }
+
+        return series.values().stream()
+                .map(this::toRecurringResponse)
                 .toList();
     }
 
@@ -86,7 +123,7 @@ public class BloqueioServiceImpl implements BloqueioService {
     @Transactional
     public void delete(Long id) {
         BloqueioHorario bloqueio = bloqueioHorarioRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Bloqueio nao encontrado."));
+                .orElseThrow(() -> new NotFoundException("Bloqueio não encontrado."));
         bloqueioHorarioRepository.delete(bloqueio);
     }
 
@@ -94,7 +131,7 @@ public class BloqueioServiceImpl implements BloqueioService {
     @Transactional
     public void deleteSerie(Long id) {
         BloqueioHorario bloqueio = bloqueioHorarioRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Bloqueio nao encontrado."));
+                .orElseThrow(() -> new NotFoundException("Bloqueio não encontrado."));
 
         if (bloqueio.getSerieRecorrenciaId() == null || bloqueio.getSerieRecorrenciaId().isBlank()) {
             bloqueioHorarioRepository.delete(bloqueio);
@@ -105,16 +142,21 @@ public class BloqueioServiceImpl implements BloqueioService {
         bloqueioHorarioRepository.deleteAll(bloqueiosDaSerie);
     }
 
-    private BloqueioResponse toResponse(BloqueioHorario bloqueio) {
-        BloqueioResponse response = new BloqueioResponse();
-        response.setId(bloqueio.getId());
-        response.setEspacoId(bloqueio.getEspaco().getId());
-        response.setEspacoNome(bloqueio.getEspaco().getNome());
-        response.setData(bloqueio.getData());
-        response.setHorarioInicio(bloqueio.getHorarioInicio());
-        response.setHorarioFim(bloqueio.getHorarioFim());
-        response.setMotivo(bloqueio.getMotivo());
-        response.setSerieRecorrenciaId(bloqueio.getSerieRecorrenciaId());
+    private BloqueioRecorrenteResponse toRecurringResponse(List<BloqueioHorario> bloqueiosDaSerie) {
+        BloqueioHorario primeiroBloqueio = bloqueiosDaSerie.get(0);
+        BloqueioHorario ultimoBloqueio = bloqueiosDaSerie.get(bloqueiosDaSerie.size() - 1);
+
+        BloqueioRecorrenteResponse response = new BloqueioRecorrenteResponse();
+        response.setId(primeiroBloqueio.getId());
+        response.setEspacoId(primeiroBloqueio.getEspaco().getId());
+        response.setEspacoNome(primeiroBloqueio.getEspaco().getNome());
+        response.setSerieRecorrenciaId(primeiroBloqueio.getSerieRecorrenciaId());
+        response.setDataInicio(primeiroBloqueio.getData());
+        response.setDataFim(ultimoBloqueio.getData());
+        response.setHorarioInicio(primeiroBloqueio.getHorarioInicio());
+        response.setHorarioFim(primeiroBloqueio.getHorarioFim());
+        response.setMotivo(primeiroBloqueio.getMotivo());
+        response.setTotalOcorrencias(bloqueiosDaSerie.size());
         return response;
     }
 
@@ -124,11 +166,11 @@ public class BloqueioServiceImpl implements BloqueioService {
         }
 
         if (request.getDataFimRecorrencia() == null) {
-            throw new BadRequestException("Informe a data final da recorrencia semanal.");
+            throw new BadRequestException("Informe a data final da recorrência semanal.");
         }
 
         if (request.getDataFimRecorrencia().isBefore(request.getData())) {
-            throw new BadRequestException("A data final da recorrencia deve ser igual ou posterior a data inicial.");
+            throw new BadRequestException("A data final da recorrência deve ser igual ou posterior à data inicial.");
         }
 
         List<LocalDate> datas = new ArrayList<>();
@@ -150,7 +192,7 @@ public class BloqueioServiceImpl implements BloqueioService {
         );
 
         if (overlap) {
-            throw new ConflictException(buildConflictMessage("Ja existe bloqueio para este intervalo.", data, recorrencia));
+            throw new ConflictException(buildConflictMessage("Já existe bloqueio para este intervalo.", data, recorrencia));
         }
 
         boolean conflitoReserva = reservaRepository.existsByEspacoIdAndDataAndStatusAndHorarioInicioLessThanAndHorarioFimGreaterThan(
@@ -162,7 +204,7 @@ public class BloqueioServiceImpl implements BloqueioService {
         );
 
         if (conflitoReserva) {
-            throw new ConflictException(buildConflictMessage("Ja existe reserva ativa para este intervalo.", data, recorrencia));
+            throw new ConflictException(buildConflictMessage("Já existe reserva ativa para este intervalo.", data, recorrencia));
         }
     }
 
@@ -171,36 +213,24 @@ public class BloqueioServiceImpl implements BloqueioService {
             return baseMessage;
         }
 
-        return String.format("%s Conflito na recorrencia em %s.", baseMessage, data.format(DATE_FORMATTER));
+        return String.format("%s Conflito na recorrência em %s.", baseMessage, data.format(DATE_FORMATTER));
     }
 
-    private void validateHorario(LocalTime inicio, LocalTime fim) {
-        if (inicio.getMinute() != 0 || inicio.getSecond() != 0 || inicio.getNano() != 0
-                || fim.getMinute() != 0 || fim.getSecond() != 0 || fim.getNano() != 0) {
-            throw new BadRequestException("Os bloqueios devem ser definidos em hora cheia.");
+    private void validateDataBloqueio(LocalDate data, LocalTime fim, LocalDate hoje, LocalTime agora) {
+        if (data.isBefore(hoje)) {
+            throw new BadRequestException("A data do bloqueio deve ser hoje ou futura.");
         }
 
-        if (!fim.isAfter(inicio)) {
-            throw new BadRequestException("Horario final deve ser maior que o horario inicial.");
+        if (data.isEqual(hoje) && !fim.isAfter(agora)) {
+            throw new BadRequestException("Para bloqueios de hoje, selecione um horario que ainda nao tenha terminado.");
         }
     }
 
-    private void validateHorarioFuncionamento(Espaco espaco, LocalTime inicio, LocalTime fim) {
-        LocalTime funcionamentoInicio = espaco.getHorarioFuncionamentoInicio() != null
-                ? espaco.getHorarioFuncionamentoInicio()
-                : HORARIO_PADRAO_INICIO;
-        LocalTime funcionamentoFim = espaco.getHorarioFuncionamentoFim() != null
-                ? espaco.getHorarioFuncionamentoFim()
-                : HORARIO_PADRAO_FIM;
+    LocalDate nowDate() {
+        return AppClockSupport.nowDate();
+    }
 
-        if (inicio.isBefore(funcionamentoInicio) || fim.isAfter(funcionamentoFim)) {
-            throw new BadRequestException(
-                    String.format(
-                            "O bloqueio precisa estar dentro do horario de funcionamento do espaco: %s as %s.",
-                            funcionamentoInicio,
-                            funcionamentoFim
-                    )
-            );
-        }
+    LocalTime nowTime() {
+        return AppClockSupport.nowTime();
     }
 }

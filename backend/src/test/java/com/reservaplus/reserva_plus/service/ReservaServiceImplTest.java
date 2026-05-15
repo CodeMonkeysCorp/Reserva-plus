@@ -115,7 +115,7 @@ class ReservaServiceImplTest {
         Usuario usuario = buildUsuario();
         Espaco espaco = buildEspaco();
 
-        given(usuarioRepository.findByEmail("morador@teste.com")).willReturn(Optional.of(usuario));
+        given(usuarioRepository.findByEmailIgnoreCase("morador@teste.com")).willReturn(Optional.of(usuario));
         given(espacoRepository.findByIdForUpdate(1L)).willReturn(Optional.of(espaco));
         given(bloqueioHorarioRepository.existsByEspacoIdAndDataAndHorarioInicioLessThanAndHorarioFimGreaterThan(
                 eq(1L),
@@ -174,6 +174,40 @@ class ReservaServiceImplTest {
         assertEquals("serie-123", response.getBloqueios().get(0).getSerieRecorrenciaId());
     }
 
+    @Test
+    void historicoShouldFilterByDateRangeForUser() {
+        LocalDate dataInicial = LocalDate.of(2026, 5, 13);
+        LocalDate dataFinal = LocalDate.of(2026, 5, 14);
+        Usuario usuario = buildUsuario();
+        Espaco espaco = buildEspaco();
+        Reserva reserva = buildReserva(usuario, espaco, LocalDate.of(2026, 5, 14), LocalTime.of(18, 0), LocalTime.of(19, 0), ReservaStatus.ATIVA);
+
+        given(usuarioRepository.findByEmailIgnoreCase("morador@teste.com")).willReturn(Optional.of(usuario));
+        given(reservaRepository.findByUsuarioIdAndDataBetweenOrderByDataDescHorarioInicioDesc(usuario.getId(), dataInicial, dataFinal))
+                .willReturn(List.of(reserva));
+
+        List<ReservaResponse> response = reservaService.historico("morador@teste.com", false, dataInicial, dataFinal);
+
+        assertEquals(1, response.size());
+        assertEquals(reserva.getData(), response.get(0).getData());
+        assertEquals(reserva.getHorarioInicio(), response.get(0).getHorarioInicio());
+        verify(reservaRepository).findByUsuarioIdAndDataBetweenOrderByDataDescHorarioInicioDesc(usuario.getId(), dataInicial, dataFinal);
+    }
+
+    @Test
+    void historicoShouldRejectInvertedDateRange() {
+        LocalDate dataInicial = LocalDate.of(2026, 5, 14);
+        LocalDate dataFinal = LocalDate.of(2026, 5, 13);
+
+        BadRequestException exception = assertThrows(
+                BadRequestException.class,
+                () -> reservaService.historico("admin@teste.com", true, dataInicial, dataFinal)
+        );
+
+        assertEquals("Data inicial deve ser menor ou igual a data final.", exception.getMessage());
+        verifyNoInteractions(usuarioRepository, reservaRepository);
+    }
+
     private ReservaCreateRequest buildRequest(Long espacoId, LocalDate data, LocalTime horarioInicio, LocalTime horarioFim) {
         ReservaCreateRequest request = new ReservaCreateRequest();
         request.setEspacoId(espacoId);
@@ -200,5 +234,25 @@ class ReservaServiceImplTest {
         espaco.setHorarioFuncionamentoInicio(LocalTime.of(6, 0));
         espaco.setHorarioFuncionamentoFim(LocalTime.of(23, 0));
         return espaco;
+    }
+
+    private Reserva buildReserva(
+            Usuario usuario,
+            Espaco espaco,
+            LocalDate data,
+            LocalTime horarioInicio,
+            LocalTime horarioFim,
+            ReservaStatus status
+    ) {
+        Reserva reserva = new Reserva();
+        reserva.setId(15L);
+        reserva.setUsuario(usuario);
+        reserva.setEspaco(espaco);
+        reserva.setData(data);
+        reserva.setHorarioInicio(horarioInicio);
+        reserva.setHorarioFim(horarioFim);
+        reserva.setStatus(status);
+        reserva.setCriadoEm(LocalDateTime.of(2026, 5, 10, 9, 0));
+        return reserva;
     }
 }

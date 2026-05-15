@@ -1,7 +1,7 @@
 <section class="auth-page">
   <div class="card-soft auth-card">
     <h1 class="auth-title">Entrar no Reserva+</h1>
-    <p class="auth-subtitle">Use seu e-mail para acessar reservas, histórico e os espaços disponíveis do condomínio.</p>
+    <p class="auth-subtitle">Use seu e-mail para acessar reservas, histórico e os espaços disponíveis na plataforma.</p>
 
     <div class="alert alert-danger py-2" *ngIf="errorMessage">{{ errorMessage }}</div>
 
@@ -9,7 +9,10 @@
       <div class="mb-3">
         <label class="form-label" for="email">E-mail</label>
         <input id="email" type="email" class="form-control" formControlName="email" placeholder="voce@email.com" />
-        <div class="text-danger mt-1 small" *ngIf="form.controls.email.touched && form.controls.email.invalid">
+        <div class="text-danger mt-1 small" *ngIf="submitAttempted && form.controls.email.errors?.['required']">
+          Informe seu e-mail.
+        </div>
+        <div class="text-danger mt-1 small" *ngIf="submitAttempted && !form.controls.email.errors?.['required'] && form.controls.email.invalid">
           Informe um e-mail válido.
         </div>
       </div>
@@ -38,8 +41,8 @@
             </svg>
           </button>
         </div>
-        <div class="text-danger mt-1 small" *ngIf="form.controls.senha.touched && form.controls.senha.invalid">
-          A senha precisa ter ao menos 6 caracteres.
+        <div class="text-danger mt-1 small" *ngIf="submitAttempted && form.controls.senha.errors?.['required']">
+          Informe sua senha.
         </div>
       </div>
 

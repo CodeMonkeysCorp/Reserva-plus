@@ -23,12 +23,13 @@ export class LoginComponent {
 
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
-    senha: ['', [Validators.required, Validators.minLength(6)]]
+    senha: ['', [Validators.required]]
   });
 
   loading = false;
   errorMessage = '';
   showSenha = false;
+  submitAttempted = false;
 
   constructor() {
     if (this.authService.isAuthenticated()) {
@@ -38,6 +39,7 @@ export class LoginComponent {
 
   submit(): void {
     this.errorMessage = '';
+    this.submitAttempted = true;
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;

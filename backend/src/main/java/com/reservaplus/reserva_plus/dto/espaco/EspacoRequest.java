@@ -19,6 +19,9 @@ public class EspacoRequest {
     @Size(max = 500, message = "A descricao deve ter no maximo 500 caracteres.")
     private String descricao;
 
+    @Size(max = 255, message = "A chave da imagem deve ter no maximo 255 caracteres.")
+    private String imagemObjectKey;
+
     @NotNull(message = "Informe o horario inicial de funcionamento.")
     private LocalTime horarioFuncionamentoInicio;
 
@@ -26,6 +29,7 @@ public class EspacoRequest {
     private LocalTime horarioFuncionamentoFim;
 
     private Boolean ativo = true;
+    private Boolean destaque;
 
     public String getNome() {
         return nome;
@@ -51,6 +55,14 @@ public class EspacoRequest {
         this.descricao = descricao;
     }
 
+    public String getImagemObjectKey() {
+        return imagemObjectKey;
+    }
+
+    public void setImagemObjectKey(String imagemObjectKey) {
+        this.imagemObjectKey = imagemObjectKey;
+    }
+
     public LocalTime getHorarioFuncionamentoInicio() {
         return horarioFuncionamentoInicio;
     }
@@ -73,5 +85,13 @@ public class EspacoRequest {
 
     public void setAtivo(Boolean ativo) {
         this.ativo = ativo;
+    }
+
+    public Boolean getDestaque() {
+        return destaque;
+    }
+
+    public void setDestaque(Boolean destaque) {
+        this.destaque = destaque;
     }
 }

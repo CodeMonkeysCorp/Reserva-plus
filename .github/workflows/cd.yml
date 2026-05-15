@@ -1,0 +1,135 @@
+name: CD
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Backend tests
+        working-directory: backend
+        run: mvn -B test
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Frontend type check
+        working-directory: frontend
+        run: npx tsc --noEmit --project tsconfig.app.json --noUnusedLocals --noUnusedParameters
+
+      - name: Frontend build
+        working-directory: frontend
+        run: npm run build
+
+  publish:
+    name: Publish Images
+    runs-on: ubuntu-latest
+    needs: test
+
+    outputs:
+      backend-image: ${{ steps.images.outputs.backend_image }}
+      frontend-image: ${{ steps.images.outputs.frontend_image }}
+      image-tag: ${{ steps.images.outputs.image_tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image names
+        id: images
+        shell: bash
+        run: |
+          repo="${GITHUB_REPOSITORY,,}"
+          tag="${GITHUB_REF_NAME}"
+          tag="${tag//\//-}"
+          echo "backend_image=ghcr.io/${repo}/backend" >> "$GITHUB_OUTPUT"
+          echo "frontend_image=ghcr.io/${repo}/frontend" >> "$GITHUB_OUTPUT"
+          echo "image_tag=${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: true
+          tags: |
+            ${{ steps.images.outputs.backend_image }}:${{ steps.images.outputs.image_tag }}
+            ${{ steps.images.outputs.backend_image }}:latest
+
+      - name: Publish frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          push: true
+          tags: |
+            ${{ steps.images.outputs.frontend_image }}:${{ steps.images.outputs.image_tag }}
+            ${{ steps.images.outputs.frontend_image }}:latest
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: publish
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
+
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script: |
+            set -e
+            cd "${{ vars.DEPLOY_PATH }}"
+            env_file="${{ vars.DEPLOY_ENV_FILE }}"
+            if [ -z "$env_file" ]; then
+              env_file=".env.prod"
+            fi
+            if [ -n "${{ secrets.GHCR_TOKEN }}" ]; then
+              echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER || github.actor }}" --password-stdin
+            fi
+            export BACKEND_IMAGE="${{ needs.publish.outputs.backend-image }}:${{ needs.publish.outputs.image-tag }}"
+            export FRONTEND_IMAGE="${{ needs.publish.outputs.frontend-image }}:${{ needs.publish.outputs.image-tag }}"
+            docker compose --env-file "$env_file" -f compose.prod.yaml pull
+            docker compose --env-file "$env_file" -f compose.prod.yaml up -d
+            docker image prune -f

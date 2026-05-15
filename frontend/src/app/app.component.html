@@ -4,13 +4,14 @@
       <a class="brand" routerLink="/home">Reserva+</a>
 
       <nav class="topbar-links" *ngIf="isAuthenticated">
-        <a routerLink="/home" routerLinkActive="active">Painel</a>
-        <a routerLink="/reservas" routerLinkActive="active">Reservar</a>
-        <a *ngIf="!isAdmin" routerLink="/minhas-reservas" routerLinkActive="active">Minhas reservas</a>
-        <a *ngIf="isAdmin" routerLink="/gerenciar-reservas" routerLinkActive="active">Gerenciar reservas</a>
-        <a *ngIf="isAdmin" routerLink="/usuarios" routerLinkActive="active">Usuários</a>
-        <a *ngIf="isAdmin" routerLink="/espacos" routerLinkActive="active">Espaços</a>
-        <a *ngIf="isAdmin" routerLink="/bloqueios" routerLinkActive="active">Bloqueios</a>
+          <a routerLink="/home" routerLinkActive="active">Início</a>
+          <a routerLink="/reservas" routerLinkActive="active">Reservar</a>
+          <a *ngIf="!isAdmin" routerLink="/minhas-reservas" routerLinkActive="active">Minhas reservas</a>
+          <a *ngIf="isAdmin" class="admin-link" routerLink="/painel" routerLinkActive="active">Painel</a>
+          <a *ngIf="isAdmin" class="admin-link" routerLink="/gerenciar-reservas" routerLinkActive="active">Gerenciar reservas</a>
+          <a *ngIf="isAdmin" class="admin-link" routerLink="/usuarios" routerLinkActive="active">Usuários</a>
+          <a *ngIf="isAdmin" class="admin-link" routerLink="/espacos" routerLinkActive="active">Espaços</a>
+          <a *ngIf="isAdmin" class="admin-link" routerLink="/bloqueios" routerLinkActive="active">Bloqueios</a>
       </nav>
 
       <div class="topbar-user" *ngIf="(user$ | async) as user; else authLinks">

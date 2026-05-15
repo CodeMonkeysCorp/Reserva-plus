@@ -43,11 +43,12 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/espacos/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/espacos/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/espacos/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/espacos/**").hasRole("ADMIN")
+                        .requestMatchers("/api/painel/**").hasRole("ADMIN")
                         .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
                         .requestMatchers("/api/bloqueios/**").hasRole("ADMIN")
                         .requestMatchers("/api/reservas/**").authenticated()

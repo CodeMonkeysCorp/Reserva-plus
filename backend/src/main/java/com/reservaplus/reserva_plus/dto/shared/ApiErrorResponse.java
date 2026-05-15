@@ -12,6 +12,22 @@ public class ApiErrorResponse {
     private String path;
     private Map<String, String> fieldErrors;
 
+    public ApiErrorResponse(
+            LocalDateTime timestamp,
+            int status,
+            String error,
+            String message,
+            String path,
+            Map<String, String> fieldErrors
+    ) {
+        this.timestamp = timestamp;
+        this.status = status;
+        this.error = error;
+        this.message = message;
+        this.path = path;
+        this.fieldErrors = fieldErrors;
+    }
+
     public LocalDateTime getTimestamp() {
         return timestamp;
     }

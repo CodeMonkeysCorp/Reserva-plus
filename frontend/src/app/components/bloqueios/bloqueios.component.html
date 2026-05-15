@@ -1,7 +1,18 @@
-<section class="bloqueio-grid">
+<section class="bloqueio-grid page-stack">
+  <article class="card-soft page-hero">
+    <div class="page-hero-copy">
+      <h1 class="page-hero-title">Gerenciar bloqueios</h1>
+      <p class="page-hero-subtitle">Crie indisponibilidades avulsas ou recorrentes.</p>
+    </div>
+  </article>
+
   <article class="card-soft panel form-panel">
-    <h1 class="panel-title">Criar bloqueio</h1>
-    <p class="panel-subtitle">Escolha o espaço e a data. Depois selecione os blocos na agenda da página.</p>
+    <div class="section-head">
+      <div class="section-copy">
+        <h2 class="section-title">Criar bloqueio</h2>
+        <p class="section-subtitle">Escolha o espaço e a data. Depois selecione as faixas na agenda da página.</p>
+      </div>
+    </div>
 
     <div class="alert alert-success py-2" *ngIf="successMessage">{{ successMessage }}</div>
     <div class="alert alert-danger py-2" *ngIf="errorMessage">{{ errorMessage }}</div>
@@ -16,7 +27,7 @@
         </div>
 
         <div class="filters-field">
-          <label class="form-label" for="data">Data inicial</label>
+          <label class="form-label" for="data">Data</label>
           <app-date-field formControlName="data" [min]="minDate"></app-date-field>
         </div>
       </div>
@@ -28,13 +39,17 @@
         </label>
 
         <div class="recurrence-grid" *ngIf="isRecurringEnabled">
-          <div class="filters-field">
+          <div class="filters-field recurrence-field">
             <label class="form-label" for="dataFimRecorrencia">Até</label>
             <app-date-field formControlName="dataFimRecorrencia" [min]="minRecurrenceEndDate"></app-date-field>
           </div>
 
-          <div class="helper-note recurrence-note">
-            A série será criada automaticamente no mesmo dia da semana por <strong>{{ recurrenceOccurrencesCount }}</strong> ocorrência(s).
+          <div class="recurrence-summary">
+            <span class="recurrence-summary-label">Série prevista</span>
+            <strong class="recurrence-summary-count">{{ recurrenceOccurrencesCount }} ocorrência(s)</strong>
+            <p class="helper-note recurrence-note">
+              A série será criada automaticamente no mesmo dia da semana até a data escolhida.
+            </p>
           </div>
         </div>
       </div>
@@ -45,7 +60,7 @@
             <span class="preview-label">Horários selecionados</span>
             <strong>{{ selectedIntervalLabel }}</strong>
           </div>
-          <span class="selection-count" *ngIf="selectedSlots.length">{{ selectedSlots.length }} bloco(s)</span>
+          <span class="selection-count" *ngIf="selectedSlots.length">{{ selectedSlots.length }} faixa(s)</span>
         </div>
 
         <p class="selection-meta">
@@ -58,7 +73,7 @@
         <p class="selection-meta" *ngIf="selectedEspaco">Funcionamento: {{ selectedEspacoHorarioLabel }}</p>
 
         <ng-template #semFaixaSelecionada>
-          <p class="helper-note mb-0">Selecione blocos livres consecutivos para montar o bloqueio.</p>
+          <p class="helper-note mb-0">Selecione faixas livres consecutivas para montar o bloqueio.</p>
         </ng-template>
 
         <div *ngIf="selectedSlots.length; else semFaixaSelecionada" class="selected-slot-list">
@@ -68,7 +83,7 @@
 
       <div>
         <div class="field-meta">
-          <label class="form-label mb-0" for="motivo">Motivo</label>
+          <label class="form-label" for="motivo">Motivo</label>
           <span>{{ motivoLength }}/300</span>
         </div>
         <textarea
@@ -89,8 +104,12 @@
   </article>
 
   <article class="card-soft panel agenda-panel">
-    <h2 class="panel-title">Agenda de bloqueios</h2>
-    <p class="panel-subtitle">Selecione blocos livres na grade. Reservas e bloqueios aparecem sinalizados.</p>
+    <div class="section-head">
+      <div class="section-copy">
+        <h2 class="section-title">Agenda de bloqueios</h2>
+        <p class="section-subtitle">Selecione faixas livres na grade.</p>
+      </div>
+    </div>
 
     <section class="agenda-shell">
       <div class="agenda-header">
@@ -105,6 +124,7 @@
 
         <div class="agenda-legend">
           <span class="legend-item legend-free">Livre</span>
+          <span class="legend-item legend-past">Concluído</span>
           <span class="legend-item legend-selected">Selecionado</span>
           <span class="legend-item legend-reserved">Reservado</span>
           <span class="legend-item legend-blocked">Bloqueado</span>
@@ -123,6 +143,7 @@
           class="slot-card"
           *ngFor="let slot of agendaSlots"
           [class.is-free]="slot.status === 'LIVRE' && !isSlotSelected(slot)"
+          [class.is-past]="slot.status === 'ENCERRADO'"
           [class.is-selected]="isSlotSelected(slot)"
           [class.is-reserved]="slot.status === 'RESERVADO'"
           [class.is-blocked]="slot.status === 'BLOQUEADO'"
@@ -138,8 +159,12 @@
   </article>
 
   <article class="card-soft panel list-panel">
-    <h2 class="panel-title">Bloqueios do dia</h2>
-    <p class="panel-subtitle">Lista de horários já indisponíveis para o espaço e a data selecionados.</p>
+    <div class="section-head">
+      <div class="section-copy">
+        <h2 class="section-title">Bloqueios do dia</h2>
+        <p class="section-subtitle">Lista de horários já indisponíveis para o espaço e a data selecionados.</p>
+      </div>
+    </div>
 
     <div *ngIf="loadingAgenda" class="text-muted">Carregando bloqueios...</div>
 
@@ -161,22 +186,61 @@
             <td class="text-end">
               <div class="table-actions">
                 <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="deleting" (click)="removeBloqueio(bloqueio)">
-                  {{ isDeleting(bloqueio) ? 'Excluindo...' : 'Excluir bloqueio' }}
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-outline-secondary"
-                  *ngIf="isRecurringBlock(bloqueio)"
-                  [disabled]="deleting"
-                  (click)="removeBloqueio(bloqueio, true)"
-                >
-                  {{ isDeleting(bloqueio, true) ? 'Excluindo...' : 'Excluir todos da rotina' }}
+                  {{ isDeleting(bloqueio) ? 'Excluindo...' : isRecurringBlock(bloqueio) ? 'Excluir ocorrência' : 'Excluir bloqueio' }}
                 </button>
               </div>
             </td>
           </tr>
           <tr *ngIf="bloqueios.length === 0">
             <td colspan="4" class="text-center text-muted py-3">Nenhum bloqueio para o filtro atual.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="card-soft panel list-panel">
+    <div class="routine-panel-head section-head">
+      <div class="section-copy">
+        <h2 class="section-title">Gerenciar rotinas semanais</h2>
+        <p class="section-subtitle">As séries recorrentes do espaço.</p>
+      </div>
+    </div>
+
+    <div *ngIf="loadingRotinas" class="text-muted">Carregando rotinas semanais...</div>
+
+    <div class="table-shell table-responsive" *ngIf="!loadingRotinas">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Dia</th>
+            <th>Horário</th>
+            <th>Vigência</th>
+            <th>Ocorrências</th>
+            <th>Motivo</th>
+            <th class="text-end">Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let rotina of rotinas">
+            <td>
+              <div class="routine-day-cell">
+                <strong>{{ recurrenceDayLabel(rotina.dataInicio) }}</strong>
+                <small>{{ rotina.espacoNome }}</small>
+              </div>
+            </td>
+            <td>{{ rotina.horarioInicio | slice:0:5 }} - {{ rotina.horarioFim | slice:0:5 }}</td>
+            <td>{{ rotina.dataInicio | date: 'dd/MM/yyyy' }} até {{ rotina.dataFim | date: 'dd/MM/yyyy' }}</td>
+            <td>{{ rotina.totalOcorrencias }}</td>
+            <td>{{ rotina.motivo || '-' }}</td>
+            <td class="text-end">
+              <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="deleting" (click)="removeRotina(rotina)">
+                {{ isDeletingRotina(rotina) ? 'Excluindo...' : 'Excluir rotina' }}
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="rotinas.length === 0">
+            <td colspan="6" class="text-center text-muted py-3">Nenhuma rotina semanal cadastrada para o espaço selecionado.</td>
           </tr>
         </tbody>
       </table>

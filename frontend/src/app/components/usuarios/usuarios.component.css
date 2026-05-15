@@ -95,22 +95,6 @@
   flex-wrap: wrap;
 }
 
-.empty-selection {
-  padding: 1.2rem 0.2rem 0.2rem;
-  color: #5b7468;
-}
-
-.empty-selection h2 {
-  margin: 0 0 0.45rem;
-  font-size: 1.05rem;
-  font-family: "Space Grotesk", "Segoe UI", sans-serif;
-  color: #1d2b24;
-}
-
-.empty-selection p {
-  margin: 0;
-}
-
 .list-head {
   display: flex;
   align-items: flex-start;

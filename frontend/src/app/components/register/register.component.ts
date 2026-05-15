@@ -31,6 +31,7 @@ export class RegisterComponent {
   errorMessage = '';
   showSenha = false;
   showConfirmarSenha = false;
+  submitAttempted = false;
 
   constructor() {
     if (this.authService.isAuthenticated()) {
@@ -40,6 +41,7 @@ export class RegisterComponent {
 
   submit(): void {
     this.errorMessage = '';
+    this.submitAttempted = true;
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -83,7 +85,7 @@ export class RegisterComponent {
 
   get senhasNaoConferem(): boolean {
     return (
-      this.form.controls.confirmarSenha.touched &&
+      this.submitAttempted &&
       this.form.controls.senha.value.length > 0 &&
       this.form.controls.confirmarSenha.value.length > 0 &&
       this.form.controls.senha.value !== this.form.controls.confirmarSenha.value

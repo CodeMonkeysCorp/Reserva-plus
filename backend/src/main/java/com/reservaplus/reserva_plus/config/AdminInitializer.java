@@ -3,6 +3,7 @@ package com.reservaplus.reserva_plus.config;
 import com.reservaplus.reserva_plus.model.UserRole;
 import com.reservaplus.reserva_plus.model.Usuario;
 import com.reservaplus.reserva_plus.repository.UsuarioRepository;
+import com.reservaplus.reserva_plus.support.EmailAddressSupport;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,13 +31,14 @@ public class AdminInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (usuarioRepository.existsByEmail(adminEmail)) {
+        String normalizedAdminEmail = EmailAddressSupport.normalize(adminEmail);
+        if (usuarioRepository.existsByEmailIgnoreCase(normalizedAdminEmail)) {
             return;
         }
 
         Usuario admin = new Usuario();
         admin.setNome(adminName);
-        admin.setEmail(adminEmail.toLowerCase());
+        admin.setEmail(normalizedAdminEmail);
         admin.setSenha(passwordEncoder.encode(adminPassword));
         admin.setRole(UserRole.ADMIN);
         usuarioRepository.save(admin);

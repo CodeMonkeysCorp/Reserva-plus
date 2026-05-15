@@ -84,7 +84,7 @@ interface CalendarDay {
 
     .date-trigger {
       width: 100%;
-      min-height: 3.35rem;
+      min-height: var(--field-min-height, 3.5rem);
       border: 1px solid var(--field-border);
       border-radius: 16px;
       padding: 0.85rem 1rem;
@@ -96,6 +96,7 @@ interface CalendarDay {
       gap: 0.75rem;
       box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.85),
+        0 0 0 1px rgba(36, 73, 61, 0.05),
         0 1px 0 rgba(255, 255, 255, 0.5);
       transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
       font: inherit;

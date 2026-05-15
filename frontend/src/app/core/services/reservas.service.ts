@@ -4,6 +4,12 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AgendaDia, Reserva, ReservaCreatePayload } from '../models';
 
+interface HistoricoReservaFiltros {
+  data?: string;
+  dataInicial?: string;
+  dataFinal?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -19,14 +25,22 @@ export class ReservasService {
     });
   }
 
-  historico(data?: string): Observable<Reserva[]> {
-    const options = data
-      ? {
-          params: {
-            data
-          }
-        }
-      : {};
+  historico(filters?: HistoricoReservaFiltros): Observable<Reserva[]> {
+    const params: Record<string, string> = {};
+
+    if (filters?.data) {
+      params['data'] = filters.data;
+    }
+
+    if (filters?.dataInicial) {
+      params['dataInicial'] = filters.dataInicial;
+    }
+
+    if (filters?.dataFinal) {
+      params['dataFinal'] = filters.dataFinal;
+    }
+
+    const options = Object.keys(params).length > 0 ? { params } : {};
 
     return this.http.get<Reserva[]>(`${environment.apiUrl}/reservas/historico`, options);
   }

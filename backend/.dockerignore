@@ -1,2 +1,6 @@
 target/
-.tools/
+.mvn/wrapper/maven-wrapper.jar
+.classpath
+.project
+.settings/
+*.log

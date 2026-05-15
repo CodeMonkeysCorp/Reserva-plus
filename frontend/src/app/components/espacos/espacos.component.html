@@ -1,10 +1,22 @@
-<section class="page-grid">
+<section class="page-grid page-stack">
+  <article class="card-soft page-hero">
+    <div class="page-hero-copy">
+      <h1 class="page-hero-title">Espaços do sistema</h1>
+      <p class="page-hero-subtitle">Gerencie imagens, destaques, tipos, horários e status dos ambientes para manter o catálogo do Reserva+ sempre pronto para reserva.</p>
+    </div>
+  </article>
+
   <article class="card-soft panel form-panel" #formPanel>
-    <h1 class="panel-title">{{ editingId ? 'Editar espaço' : 'Novo espaço' }}</h1>
-    <p class="panel-subtitle">Cadastre espaços com descrição clara, tipo configurável e horário de funcionamento definido.</p>
+    <div class="section-head">
+      <div class="section-copy">
+        <h2 class="section-title">{{ editingId ? 'Editar espaço' : 'Novo espaço' }}</h2>
+        <p class="section-subtitle">Cadastre espaços com descrição clara, tipo configurável, horário de funcionamento e imagem de destaque.</p>
+      </div>
+    </div>
 
     <div class="alert alert-success py-2" *ngIf="successMessage">{{ successMessage }}</div>
     <div class="alert alert-danger py-2" *ngIf="errorMessage">{{ errorMessage }}</div>
+    <div class="alert alert-danger py-2" *ngIf="imageErrorMessage">{{ imageErrorMessage }}</div>
 
     <form class="form-stack" [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <div>
@@ -18,7 +30,36 @@
           formControlName="tipo"
           [options]="tipoOptions"
           placeholder="Selecione o tipo do espaço"
+          (removeOption)="requestRemoveTipoOption($event)"
         ></app-select-field>
+      </div>
+
+      <div class="inline-action inline-warning type-removal-panel" *ngIf="pendingTipoRemoval as tipoRemocao">
+        <strong class="type-removal-title">Remover tipo personalizado</strong>
+
+        <div class="type-removal-summary">
+          <span class="type-removal-summary-label">Tipo afetado</span>
+          <strong class="type-removal-summary-count">{{ tipoLabel(tipoRemocao.tipo) }}</strong>
+          <p class="helper-note type-removal-note">
+            Esse tipo está em <span class="type-removal-emphasis">{{ tipoRemocao.affectedEspacos.length }}</span> espaço(s). Escolha qual tipo deve substituí-lo.
+          </p>
+        </div>
+
+        <div class="type-removal-action-row">
+          <div class="type-removal-field">
+            <label class="form-label" for="tipoReplacement">Substituir por</label>
+            <app-select-field [formControl]="tipoReplacementControl" [options]="tipoReplacementOptions"></app-select-field>
+          </div>
+
+          <div class="inline-action-buttons">
+            <button type="button" class="btn btn-outline-secondary" [disabled]="saving || imageUploading" (click)="cancelTipoRemoval()">
+              Cancelar
+            </button>
+            <button type="button" class="btn btn-danger" [disabled]="saving || imageUploading" (click)="confirmTipoRemoval()">
+              {{ saving ? 'Removendo...' : 'Substituir e remover' }}
+            </button>
+          </div>
+        </div>
       </div>
 
       <div *ngIf="isCreatingNewType">
@@ -32,18 +73,30 @@
       <div class="time-row">
         <div>
           <label class="form-label" for="horarioFuncionamentoInicio">Abre às</label>
-          <input id="horarioFuncionamentoInicio" type="time" class="form-control" formControlName="horarioFuncionamentoInicio" step="3600" />
+          <app-time-field
+            inputId="horarioFuncionamentoInicio"
+            formControlName="horarioFuncionamentoInicio"
+            [minuteStep]="60"
+            [min]="horarioFuncionamentoInicioMin"
+            [max]="horarioFuncionamentoInicioMax"
+          ></app-time-field>
         </div>
 
         <div>
           <label class="form-label" for="horarioFuncionamentoFim">Fecha às</label>
-          <input id="horarioFuncionamentoFim" type="time" class="form-control" formControlName="horarioFuncionamentoFim" step="3600" />
+          <app-time-field
+            inputId="horarioFuncionamentoFim"
+            formControlName="horarioFuncionamentoFim"
+            [minuteStep]="60"
+            [min]="horarioFuncionamentoFimMin"
+            [max]="horarioFuncionamentoFimMax"
+          ></app-time-field>
         </div>
       </div>
 
       <div>
         <div class="field-meta">
-          <label class="form-label mb-0" for="descricao">Descrição</label>
+          <label class="form-label" for="descricao">Descrição</label>
           <span>{{ descricaoLength }}/500</span>
         </div>
         <textarea
@@ -55,15 +108,52 @@
         ></textarea>
       </div>
 
+      <div class="image-field">
+        <div class="field-meta">
+          <label class="form-label" for="imagemEspaco">Imagem do espaço</label>
+        </div>
+
+        <input
+          #imageInput
+          id="imagemEspaco"
+          type="file"
+          class="visually-hidden-input"
+          accept="image/png,image/jpeg,image/webp"
+          [disabled]="saving || imageUploading"
+          (change)="onImageSelected($event)"
+        />
+
+        <div class="file-picker">
+          <button type="button" class="file-picker-button" [disabled]="saving || imageUploading" (click)="openImagePicker()">
+            Escolher imagem
+          </button>
+          <div class="file-picker-name">
+            <span class="file-picker-copy" [class.is-empty]="!selectedImageFileName">{{ imagePickerLabel }}</span>
+            <span class="file-picker-meta">JPG, PNG ou WEBP</span>
+          </div>
+        </div>
+
+        <div class="image-preview" *ngIf="hasSelectedImage">
+          <img *ngIf="selectedImageUrl" [src]="selectedImageUrl" alt="Pré-visualização da imagem do espaço" />
+          <div class="image-preview-copy">
+            <strong>{{ selectedImageObjectKey === originalImageObjectKey ? 'Imagem atual' : 'Nova imagem pronta para salvar' }}</strong>
+            <p class="mb-0" *ngIf="!selectedImageUrl">A imagem foi enviada para o bucket e será vinculada ao espaço quando você salvar.</p>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="saving || imageUploading" (click)="removeSelectedImage()">
+            {{ selectedImageObjectKey === originalImageObjectKey ? 'Remover no salvamento' : 'Descartar upload' }}
+          </button>
+        </div>
+      </div>
+
       <div class="form-actions">
-        <button type="submit" class="btn btn-brand text-white" [disabled]="saving">
+        <button type="submit" class="btn btn-brand text-white" [disabled]="saving || imageUploading">
           {{ saving ? 'Salvando...' : (editingId ? 'Atualizar espaço' : 'Criar espaço') }}
         </button>
         <button
           type="button"
           class="btn btn-outline-secondary"
           *ngIf="editingId"
-          [disabled]="saving"
+          [disabled]="saving || imageUploading"
           (click)="cancelEdit()"
         >
           Cancelar edição
@@ -73,8 +163,12 @@
   </article>
 
   <article class="card-soft panel list-panel">
-    <h2 class="panel-title">Espaços cadastrados</h2>
-    <p class="panel-subtitle">Gerencie os ambientes e ajuste o horário de funcionamento de cada um.</p>
+    <div class="section-head">
+      <div class="section-copy">
+        <h2 class="section-title">Espaços cadastrados</h2>
+        <p class="section-subtitle">Gerencie os ambientes, ajuste horários e mantenha uma imagem de referência para cada espaço.</p>
+      </div>
+    </div>
     <div *ngIf="loading" class="text-muted">Carregando espaços...</div>
 
     <div class="inline-action inline-danger" *ngIf="pendingDelete as espaco">
@@ -97,6 +191,7 @@
           <tr>
             <th>Nome</th>
             <th>Tipo</th>
+            <th class="text-center">Destaque</th>
             <th>Status</th>
             <th class="text-end">Ações</th>
           </tr>
@@ -104,27 +199,69 @@
         <tbody>
           <tr *ngFor="let espaco of espacos">
             <td>
-              <strong>{{ espaco.nome }}</strong>
-              <div class="small text-muted" *ngIf="espaco.descricao">{{ espaco.descricao }}</div>
-              <div class="small text-muted">
-                Funcionamento: {{ formatTime(espaco.horarioFuncionamentoInicio) }} - {{ formatTime(espaco.horarioFuncionamentoFim) }}
+              <div class="espaco-main-cell">
+                <div class="espaco-thumb" *ngIf="espaco.imagemUrl; else semImagem">
+                  <img [src]="espaco.imagemUrl" [alt]="'Imagem de ' + espaco.nome" />
+                </div>
+                <ng-template #semImagem>
+                  <div class="espaco-thumb espaco-thumb-placeholder">Reserva+</div>
+                </ng-template>
+
+                <div class="espaco-copy">
+                  <div class="espaco-copy-head">
+                    <strong>{{ espaco.nome }}</strong>
+                    <span class="featured-badge" *ngIf="espaco.destaque">Em destaque</span>
+                  </div>
+                  <div class="small text-muted" *ngIf="espaco.descricao">{{ espaco.descricao }}</div>
+                  <div class="small text-muted">
+                    Funcionamento: {{ formatTime(espaco.horarioFuncionamentoInicio) }} - {{ formatTime(espaco.horarioFuncionamentoFim) }}
+                  </div>
+                </div>
               </div>
             </td>
             <td>{{ tipoLabel(espaco.tipo) }}</td>
+            <td class="text-center highlight-cell">
+              <button
+                type="button"
+                class="highlight-toggle"
+                [class.is-active]="espaco.destaque"
+                [disabled]="saving || imageUploading"
+                [attr.aria-pressed]="espaco.destaque"
+                [attr.aria-label]="espaco.destaque ? 'Remover espaço dos destaques' : 'Colocar espaço em destaque'"
+                [attr.title]="espaco.destaque ? 'Remover de destaque' : 'Colocar em destaque'"
+                (click)="toggleDestaque(espaco)"
+              >
+                <span class="highlight-toggle-icon" aria-hidden="true"></span>
+              </button>
+            </td>
             <td>
               <span class="badge" [class.bg-success]="espaco.ativo" [class.bg-secondary]="!espaco.ativo">
                 {{ espaco.ativo ? 'ATIVO' : 'INATIVO' }}
               </span>
             </td>
             <td class="text-end">
-              <button type="button" class="btn btn-sm btn-outline-primary me-2" (click)="edit(espaco)">Editar</button>
-              <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="saving" (click)="requestRemove(espaco)">
-                Excluir
-              </button>
+              <div class="space-table-actions">
+                <button type="button" class="btn btn-sm btn-outline-primary" [disabled]="saving || imageUploading" (click)="edit(espaco)">
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm"
+                  [class.btn-outline-warning]="espaco.ativo"
+                  [class.btn-outline-success]="!espaco.ativo"
+                  [disabled]="saving || imageUploading"
+                  (click)="toggleStatus(espaco)"
+                >
+                  {{ espaco.ativo ? 'Desativar' : 'Ativar' }}
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="saving || imageUploading" (click)="requestRemove(espaco)">
+                  Excluir
+                </button>
+              </div>
             </td>
           </tr>
           <tr *ngIf="espacos.length === 0">
-            <td colspan="4" class="text-center text-muted py-3">Nenhum espaço cadastrado.</td>
+            <td colspan="5" class="text-center text-muted py-3">Nenhum espaço cadastrado.</td>
           </tr>
         </tbody>
       </table>

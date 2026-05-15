@@ -11,6 +11,7 @@ import { EspacosService } from '../../core/services/espacos.service';
 import { ReservasService } from '../../core/services/reservas.service';
 import { DateFieldComponent } from '../../shared/ui/date-field/date-field.component';
 import { SelectFieldComponent } from '../../shared/ui/select-field/select-field.component';
+import { currentDateInputValue } from '../../shared/utils/date-input.utils';
 
 type FiltroTipoEspaco = 'TODOS' | EspacoTipo;
 type FiltroStatusReserva = 'TODOS' | ReservaStatus;
@@ -44,7 +45,8 @@ export class HistoricoReservasComponent implements OnInit {
     tipo: ['TODOS' as FiltroTipoEspaco],
     espacoId: [0],
     status: ['TODOS' as FiltroStatusReserva],
-    data: ['']
+    dataInicial: [currentDateInputValue()],
+    dataFinal: [currentDateInputValue()]
   });
 
   espacos: Espaco[] = [];
@@ -100,7 +102,6 @@ export class HistoricoReservasComponent implements OnInit {
     const tipo = this.form.controls.tipo.value;
     const espacoId = this.form.controls.espacoId.value;
     const status = this.form.controls.status.value;
-    const data = this.form.controls.data.value;
 
     return this.reservas
       .filter((reserva) => {
@@ -108,9 +109,8 @@ export class HistoricoReservasComponent implements OnInit {
         const matchesTipo = tipo === 'TODOS' || espaco?.tipo === tipo;
         const matchesEspaco = espacoId === 0 || reserva.espacoId === espacoId;
         const matchesStatus = status === 'TODOS' || reserva.status === status;
-        const matchesData = !data || reserva.data === data;
 
-        return matchesTipo && matchesEspaco && matchesStatus && matchesData;
+        return matchesTipo && matchesEspaco && matchesStatus;
       })
       .sort((a, b) => {
         const dataA = `${a.data}T${a.horarioInicio}`;
@@ -129,11 +129,14 @@ export class HistoricoReservasComponent implements OnInit {
   }
 
   get hasActiveFilters(): boolean {
+    const today = currentDateInputValue();
+
     return (
       this.form.controls.tipo.value !== 'TODOS' ||
       this.form.controls.espacoId.value !== 0 ||
       this.form.controls.status.value !== 'TODOS' ||
-      !!this.form.controls.data.value
+      this.form.controls.dataInicial.value !== today ||
+      this.form.controls.dataFinal.value !== today
     );
   }
 
@@ -212,12 +215,17 @@ export class HistoricoReservasComponent implements OnInit {
   }
 
   clearFilters(): void {
+    const defaultDateRange = this.getDefaultDateRange();
+
     this.form.setValue({
       tipo: 'TODOS',
       espacoId: 0,
       status: 'TODOS',
-      data: ''
-    });
+      dataInicial: defaultDateRange.dataInicial,
+      dataFinal: defaultDateRange.dataFinal
+    }, { emitEvent: false });
+
+    this.loadReservas();
   }
 
   tipoLabel(tipo: EspacoTipo | null | undefined): string {
@@ -262,15 +270,33 @@ export class HistoricoReservasComponent implements OnInit {
           this.form.controls.espacoId.setValue(0);
         }
       });
+
+    this.form.controls.dataInicial.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.loadReservas();
+      });
+
+    this.form.controls.dataFinal.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.loadReservas();
+      });
   }
 
   private loadData(): void {
+    if (!this.validateDateRange()) {
+      this.reservas = [];
+      this.loading = false;
+      return;
+    }
+
     this.loading = true;
     this.errorMessage = '';
 
     forkJoin({
       espacos: this.espacosService.list(),
-      reservas: this.reservasService.historico()
+      reservas: this.reservasService.historico(this.buildHistoricoFilters())
     })
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
@@ -284,7 +310,61 @@ export class HistoricoReservasComponent implements OnInit {
       });
   }
 
+  private loadReservas(): void {
+    if (!this.validateDateRange()) {
+      this.reservas = [];
+      this.loading = false;
+      return;
+    }
+
+    this.loading = true;
+    this.errorMessage = '';
+
+    this.reservasService
+      .historico(this.buildHistoricoFilters())
+      .pipe(finalize(() => (this.loading = false)))
+      .subscribe({
+        next: (reservas) => {
+          this.reservas = reservas;
+        },
+        error: (error: unknown) => {
+          this.errorMessage = this.apiErrorService.toMessage(error, 'Falha ao carregar reservas.');
+        }
+      });
+  }
+
   private findEspaco(espacoId: number): Espaco | undefined {
     return this.espacos.find((espaco) => espaco.id === espacoId);
+  }
+
+  private buildHistoricoFilters(): { dataInicial: string; dataFinal: string } {
+    return {
+      dataInicial: this.form.controls.dataInicial.value,
+      dataFinal: this.form.controls.dataFinal.value
+    };
+  }
+
+  private getDefaultDateRange(): { dataInicial: string; dataFinal: string } {
+    const today = currentDateInputValue();
+    return {
+      dataInicial: today,
+      dataFinal: today
+    };
+  }
+
+  private validateDateRange(): boolean {
+    const { dataInicial, dataFinal } = this.buildHistoricoFilters();
+
+    if (!dataInicial || !dataFinal) {
+      this.errorMessage = 'Selecione a data inicial e a data final.';
+      return false;
+    }
+
+    if (dataInicial > dataFinal) {
+      this.errorMessage = 'A data inicial deve ser menor ou igual à data final.';
+      return false;
+    }
+
+    return true;
   }
 }

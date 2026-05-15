@@ -20,23 +20,19 @@ import com.reservaplus.reserva_plus.repository.EspacoRepository;
 import com.reservaplus.reserva_plus.repository.ReservaHistoricoRepository;
 import com.reservaplus.reserva_plus.repository.ReservaRepository;
 import com.reservaplus.reserva_plus.repository.UsuarioRepository;
+import com.reservaplus.reserva_plus.support.EmailAddressSupport;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 @Service
 public class ReservaServiceImpl implements ReservaService {
 
-    private static final ZoneId APP_ZONE = ZoneId.of("America/Sao_Paulo");
     private static final int MAX_DIAS_ANTECEDENCIA_RESERVA = 7;
-    private static final LocalTime HORARIO_PADRAO_INICIO = LocalTime.of(6, 0);
-    private static final LocalTime HORARIO_PADRAO_FIM = LocalTime.of(23, 0);
 
     private final ReservaRepository reservaRepository;
     private final ReservaHistoricoRepository reservaHistoricoRepository;
@@ -64,10 +60,15 @@ public class ReservaServiceImpl implements ReservaService {
         LocalDate hoje = nowDate();
         LocalTime agora = nowTime();
 
-        validateHorario(request.getHorarioInicio(), request.getHorarioFim());
+        HorarioFuncionamentoSupport.validateHoraCheia(
+                request.getHorarioInicio(),
+                request.getHorarioFim(),
+                "As reservas devem ser criadas em hora cheia.",
+                "Horario final deve ser maior que o horario inicial."
+        );
         validateDataReserva(request.getData(), request.getHorarioInicio(), hoje, agora);
 
-        Usuario usuario = usuarioRepository.findByEmail(userEmail)
+        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(EmailAddressSupport.normalize(userEmail))
                 .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
 
         Espaco espaco = espacoRepository.findByIdForUpdate(request.getEspacoId())
@@ -77,7 +78,12 @@ public class ReservaServiceImpl implements ReservaService {
             throw new ConflictException("Espaco inativo. Nao e possivel reservar.");
         }
 
-        validateHorarioFuncionamento(espaco, request.getHorarioInicio(), request.getHorarioFim());
+        HorarioFuncionamentoSupport.validateDentroDoHorarioFuncionamento(
+                espaco,
+                request.getHorarioInicio(),
+                request.getHorarioFim(),
+                "A reserva precisa estar dentro do horario de funcionamento do espaco: %s as %s."
+        );
 
         boolean blocked = bloqueioHorarioRepository.existsByEspacoIdAndDataAndHorarioInicioLessThanAndHorarioFimGreaterThan(
                 espaco.getId(),
@@ -110,7 +116,7 @@ public class ReservaServiceImpl implements ReservaService {
 
         Reserva savedReserva = reservaRepository.save(reserva);
         registrarHistorico(savedReserva, null, ReservaStatus.ATIVA, ReservaHistoricoOrigem.CRIACAO);
-        return toResponse(savedReserva);
+        return ReservaBloqueioResponseSupport.toReservaResponse(savedReserva);
     }
 
     @Override
@@ -141,41 +147,27 @@ public class ReservaServiceImpl implements ReservaService {
         reserva.setStatus(ReservaStatus.CANCELADA);
         Reserva savedReserva = reservaRepository.save(reserva);
         registrarHistorico(savedReserva, statusAnterior, ReservaStatus.CANCELADA, ReservaHistoricoOrigem.CANCELAMENTO);
-        return toResponse(savedReserva);
+        return ReservaBloqueioResponseSupport.toReservaResponse(savedReserva);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReservaResponse> historico(String userEmail, boolean isAdmin, LocalDate data) {
-        if (isAdmin) {
-            if (data != null) {
-                return reservaRepository.findByData(data)
-                        .stream()
-                        .sorted(historicoDoDiaComparator())
-                        .map(this::toResponse)
-                        .toList();
-            }
+    public List<ReservaResponse> historico(String userEmail, boolean isAdmin, LocalDate dataInicial, LocalDate dataFinal) {
+        DateRange intervalo = normalizeDateRange(dataInicial, dataFinal);
 
-            return reservaRepository.findAllByOrderByDataDescHorarioInicioDesc()
+        if (isAdmin) {
+            return findHistoricoAdmin(intervalo)
                     .stream()
-                    .map(this::toResponse)
+                    .map(ReservaBloqueioResponseSupport::toReservaResponse)
                     .toList();
         }
 
-        Usuario usuario = usuarioRepository.findByEmail(userEmail)
+        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(EmailAddressSupport.normalize(userEmail))
                 .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
 
-        if (data != null) {
-            return reservaRepository.findByUsuarioIdAndData(usuario.getId(), data)
-                    .stream()
-                    .sorted(historicoDoDiaComparator())
-                    .map(this::toResponse)
-                    .toList();
-        }
-
-        return reservaRepository.findByUsuarioIdOrderByDataDescHorarioInicioDesc(usuario.getId())
+        return findHistoricoDoUsuario(usuario.getId(), intervalo)
                 .stream()
-                .map(this::toResponse)
+                .map(ReservaBloqueioResponseSupport::toReservaResponse)
                 .toList();
     }
 
@@ -186,13 +178,13 @@ public class ReservaServiceImpl implements ReservaService {
         response.setReservasAtivas(
                 reservaRepository.findByEspacoIdAndDataAndStatusOrderByHorarioInicio(espacoId, data, ReservaStatus.ATIVA)
                         .stream()
-                        .map(this::toAgendaResponse)
+                        .map(ReservaBloqueioResponseSupport::toAgendaReservaResponse)
                         .toList()
         );
         response.setBloqueios(
                 bloqueioHorarioRepository.findByEspacoIdAndDataOrderByHorarioInicio(espacoId, data)
                         .stream()
-                        .map(this::toBloqueioResponse)
+                        .map(ReservaBloqueioResponseSupport::toBloqueioResponse)
                         .toList()
         );
         return response;
@@ -224,52 +216,6 @@ public class ReservaServiceImpl implements ReservaService {
         return historicos.size();
     }
 
-    private ReservaResponse toResponse(Reserva reserva) {
-        ReservaResponse response = new ReservaResponse();
-        response.setId(reserva.getId());
-        response.setUsuarioId(reserva.getUsuario().getId());
-        response.setUsuarioNome(reserva.getUsuario().getNome());
-        response.setEspacoId(reserva.getEspaco().getId());
-        response.setEspacoNome(reserva.getEspaco().getNome());
-        response.setData(reserva.getData());
-        response.setHorarioInicio(reserva.getHorarioInicio());
-        response.setHorarioFim(reserva.getHorarioFim());
-        response.setStatus(reserva.getStatus());
-        response.setCriadoEm(reserva.getCriadoEm());
-        return response;
-    }
-
-    private ReservaResponse toAgendaResponse(Reserva reserva) {
-        ReservaResponse response = toResponse(reserva);
-        response.setUsuarioId(null);
-        response.setUsuarioNome(null);
-        return response;
-    }
-
-    private BloqueioResponse toBloqueioResponse(BloqueioHorario bloqueio) {
-        BloqueioResponse response = new BloqueioResponse();
-        response.setId(bloqueio.getId());
-        response.setEspacoId(bloqueio.getEspaco().getId());
-        response.setEspacoNome(bloqueio.getEspaco().getNome());
-        response.setData(bloqueio.getData());
-        response.setHorarioInicio(bloqueio.getHorarioInicio());
-        response.setHorarioFim(bloqueio.getHorarioFim());
-        response.setMotivo(bloqueio.getMotivo());
-        response.setSerieRecorrenciaId(bloqueio.getSerieRecorrenciaId());
-        return response;
-    }
-
-    private void validateHorario(LocalTime inicio, LocalTime fim) {
-        if (inicio.getMinute() != 0 || inicio.getSecond() != 0 || inicio.getNano() != 0
-                || fim.getMinute() != 0 || fim.getSecond() != 0 || fim.getNano() != 0) {
-            throw new BadRequestException("As reservas devem ser criadas em hora cheia.");
-        }
-
-        if (!fim.isAfter(inicio)) {
-            throw new BadRequestException("Horario final deve ser maior que o horario inicial.");
-        }
-    }
-
     private void validateDataReserva(LocalDate data, LocalTime inicio, LocalDate hoje, LocalTime agora) {
         if (data.isBefore(hoje)) {
             throw new BadRequestException("A data da reserva deve ser hoje ou futura.");
@@ -287,26 +233,6 @@ public class ReservaServiceImpl implements ReservaService {
         if (data.isEqual(hoje) && !inicio.isAfter(agora)) {
             throw new BadRequestException("Para reservas de hoje, selecione um horario de inicio posterior ao horario atual.");
         }
-    }
-
-    private void validateHorarioFuncionamento(Espaco espaco, LocalTime inicio, LocalTime fim) {
-        LocalTime funcionamentoInicio = resolveHorarioInicio(espaco);
-        LocalTime funcionamentoFim = resolveHorarioFim(espaco);
-
-        if (inicio.isBefore(funcionamentoInicio) || fim.isAfter(funcionamentoFim)) {
-            throw new BadRequestException(
-                    String.format(
-                            "A reserva precisa estar dentro do horario de funcionamento do espaco: %s as %s.",
-                            funcionamentoInicio,
-                            funcionamentoFim
-                    )
-            );
-        }
-    }
-
-    private Comparator<Reserva> historicoDoDiaComparator() {
-        return Comparator.comparing(Reserva::getHorarioInicio)
-                .thenComparing((Reserva reserva) -> reserva.getEspaco().getNome(), String.CASE_INSENSITIVE_ORDER);
     }
 
     private ReservaHistorico concluirReservaSeNecessario(Reserva reserva, LocalDate hoje, LocalTime agora) {
@@ -354,19 +280,49 @@ public class ReservaServiceImpl implements ReservaService {
         return historico;
     }
 
+    private List<Reserva> findHistoricoAdmin(DateRange intervalo) {
+        if (intervalo == null) {
+            return reservaRepository.findAllByOrderByDataDescHorarioInicioDesc();
+        }
+
+        return reservaRepository.findByDataBetweenOrderByDataDescHorarioInicioDesc(intervalo.start(), intervalo.end());
+    }
+
+    private List<Reserva> findHistoricoDoUsuario(Long usuarioId, DateRange intervalo) {
+        if (intervalo == null) {
+            return reservaRepository.findByUsuarioIdOrderByDataDescHorarioInicioDesc(usuarioId);
+        }
+
+        return reservaRepository.findByUsuarioIdAndDataBetweenOrderByDataDescHorarioInicioDesc(
+                usuarioId,
+                intervalo.start(),
+                intervalo.end()
+        );
+    }
+
+    private DateRange normalizeDateRange(LocalDate dataInicial, LocalDate dataFinal) {
+        if (dataInicial == null && dataFinal == null) {
+            return null;
+        }
+
+        LocalDate inicio = dataInicial != null ? dataInicial : dataFinal;
+        LocalDate fim = dataFinal != null ? dataFinal : dataInicial;
+
+        if (inicio.isAfter(fim)) {
+            throw new BadRequestException("Data inicial deve ser menor ou igual a data final.");
+        }
+
+        return new DateRange(inicio, fim);
+    }
+
     private LocalDate nowDate() {
-        return LocalDate.now(APP_ZONE);
+        return AppClockSupport.nowDate();
     }
 
     private LocalTime nowTime() {
-        return LocalTime.now(APP_ZONE).withSecond(0).withNano(0);
+        return AppClockSupport.nowTime();
     }
 
-    private LocalTime resolveHorarioInicio(Espaco espaco) {
-        return espaco.getHorarioFuncionamentoInicio() != null ? espaco.getHorarioFuncionamentoInicio() : HORARIO_PADRAO_INICIO;
-    }
-
-    private LocalTime resolveHorarioFim(Espaco espaco) {
-        return espaco.getHorarioFuncionamentoFim() != null ? espaco.getHorarioFuncionamentoFim() : HORARIO_PADRAO_FIM;
+    private record DateRange(LocalDate start, LocalDate end) {
     }
 }

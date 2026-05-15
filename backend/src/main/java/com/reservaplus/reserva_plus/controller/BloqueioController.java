@@ -1,6 +1,7 @@
 package com.reservaplus.reserva_plus.controller;
 
 import com.reservaplus.reserva_plus.dto.bloqueio.BloqueioCreateRequest;
+import com.reservaplus.reserva_plus.dto.bloqueio.BloqueioRecorrenteResponse;
 import com.reservaplus.reserva_plus.dto.bloqueio.BloqueioResponse;
 import com.reservaplus.reserva_plus.service.BloqueioService;
 import jakarta.validation.Valid;
@@ -40,6 +41,11 @@ public class BloqueioController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data
     ) {
         return ResponseEntity.ok(bloqueioService.findByEspacoAndData(espacoId, data));
+    }
+
+    @GetMapping("/rotinas")
+    public ResponseEntity<List<BloqueioRecorrenteResponse>> listRecurring(@RequestParam Long espacoId) {
+        return ResponseEntity.ok(bloqueioService.findRecurringByEspaco(espacoId));
     }
 
     @DeleteMapping("/{id}")

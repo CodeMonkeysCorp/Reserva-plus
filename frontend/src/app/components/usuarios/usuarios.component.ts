@@ -10,6 +10,8 @@ import { SelectFieldComponent } from '../../shared/ui/select-field/select-field.
 
 type FiltroRole = 'TODOS' | UserRole;
 
+const DEFAULT_USER_ROLE: UserRole = 'USER';
+
 @Component({
   selector: 'app-usuarios',
   standalone: true,
@@ -36,7 +38,7 @@ export class UsuariosComponent implements OnInit {
   });
 
   readonly form = this.fb.nonNullable.group({
-    role: ['USER' as UserRole, [Validators.required]],
+    role: [DEFAULT_USER_ROLE, [Validators.required]],
     senha: ['', [Validators.minLength(6), Validators.maxLength(100)]],
     confirmacaoSenha: ['']
   });
@@ -106,21 +108,13 @@ export class UsuariosComponent implements OnInit {
     this.editingId = usuario.id;
     this.successMessage = '';
     this.errorMessage = '';
-    this.form.reset({
-      role: usuario.role,
-      senha: '',
-      confirmacaoSenha: ''
-    });
-    this.scrollEditorIntoView();
+    this.resetEditorForm(usuario.role);
+    setTimeout(() => this.scrollEditorIntoView());
   }
 
   cancelEdit(): void {
     this.editingId = null;
-    this.form.reset({
-      role: 'USER',
-      senha: '',
-      confirmacaoSenha: ''
-    });
+    this.resetEditorForm();
   }
 
   submit(): void {
@@ -152,16 +146,9 @@ export class UsuariosComponent implements OnInit {
       .pipe(finalize(() => (this.saving = false)))
       .subscribe({
         next: (updated) => {
-          this.usuarios = this.usuarios
-            .map((item) => (item.id === updated.id ? updated : item))
-            .sort((a, b) => a.nome.localeCompare(b.nome) || a.email.localeCompare(b.email));
-
+          this.usuarios = this.sortUsuarios(this.usuarios.map((item) => (item.id === updated.id ? updated : item)));
           this.editingId = updated.id;
-          this.form.reset({
-            role: updated.role,
-            senha: '',
-            confirmacaoSenha: ''
-          });
+          this.resetEditorForm(updated.role);
           this.successMessage = 'Usuário atualizado com sucesso.';
         },
         error: (error: unknown) => {
@@ -183,7 +170,7 @@ export class UsuariosComponent implements OnInit {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (usuarios) => {
-          this.usuarios = [...usuarios].sort((a, b) => a.nome.localeCompare(b.nome) || a.email.localeCompare(b.email));
+          this.usuarios = this.sortUsuarios(usuarios);
         },
         error: (error: unknown) => {
           this.errorMessage = this.apiErrorService.toMessage(error, 'Falha ao carregar usuários.');
@@ -196,5 +183,17 @@ export class UsuariosComponent implements OnInit {
       behavior: 'smooth',
       block: 'start'
     });
+  }
+
+  private resetEditorForm(role: UserRole = DEFAULT_USER_ROLE): void {
+    this.form.reset({
+      role,
+      senha: '',
+      confirmacaoSenha: ''
+    });
+  }
+
+  private sortUsuarios(usuarios: AdminUser[]): AdminUser[] {
+    return [...usuarios].sort((left, right) => left.nome.localeCompare(right.nome) || left.email.localeCompare(right.email));
   }
 }

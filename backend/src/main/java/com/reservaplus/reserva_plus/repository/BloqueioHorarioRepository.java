@@ -18,5 +18,7 @@ public interface BloqueioHorarioRepository extends JpaRepository<BloqueioHorario
 
     List<BloqueioHorario> findByEspacoIdAndDataOrderByHorarioInicio(Long espacoId, LocalDate data);
 
+    List<BloqueioHorario> findByEspacoIdAndSerieRecorrenciaIdIsNotNullOrderByDataAscHorarioInicioAsc(Long espacoId);
+
     List<BloqueioHorario> findBySerieRecorrenciaId(String serieRecorrenciaId);
 }

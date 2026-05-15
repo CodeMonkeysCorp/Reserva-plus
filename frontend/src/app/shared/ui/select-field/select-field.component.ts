@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, HostListener, Input, QueryList, ViewChildren, forwardRef, inject } from '@angular/core';
+import { Component, ElementRef, EventEmitter, HostListener, Input, Output, QueryList, ViewChildren, forwardRef, inject } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 export interface SelectFieldOption<T = string | number> {
@@ -8,6 +8,8 @@ export interface SelectFieldOption<T = string | number> {
   hint?: string;
   variant?: 'default' | 'action';
   disabled?: boolean;
+  removable?: boolean;
+  removeAriaLabel?: string;
 }
 
 @Component({
@@ -30,6 +32,7 @@ export interface SelectFieldOption<T = string | number> {
         [class.is-action]="selectedOption?.variant === 'action'"
         [disabled]="disabled"
         [attr.aria-expanded]="isOpen"
+        [attr.title]="selectedOption ? optionTooltip(selectedOption) : null"
         aria-haspopup="listbox"
         (click)="toggle()"
         (blur)="markAsTouched()"
@@ -43,28 +46,44 @@ export interface SelectFieldOption<T = string | number> {
       </button>
 
       <div class="select-panel" *ngIf="isOpen" role="listbox">
-        <button
-          #optionButton
-          type="button"
-          class="select-option"
+        <div
+          class="select-option-row"
           *ngFor="let option of options; let index = index"
-          [class.is-selected]="isSelected(option)"
-          [class.is-action]="option.variant === 'action'"
-          [class.is-disabled]="option.disabled"
-          [disabled]="option.disabled"
-          [attr.aria-selected]="isSelected(option)"
-          (click)="select(option)"
-          (keydown)="onOptionKeydown($event, index)"
+          [class.has-remove]="option.removable"
         >
-          <span class="select-copy">
-            <span class="select-option-label">{{ option.label }}</span>
-            <span class="select-hint" *ngIf="option.hint">{{ option.hint }}</span>
-          </span>
-          <span class="select-option-aside">
-            <span class="select-badge" *ngIf="option.variant === 'action' && !isSelected(option)">Novo</span>
-            <span class="select-check" *ngIf="isSelected(option)" aria-hidden="true">&larr;</span>
-          </span>
-        </button>
+          <button
+            #optionButton
+            type="button"
+            class="select-option"
+            [class.is-selected]="isSelected(option)"
+            [class.is-action]="option.variant === 'action'"
+            [class.is-disabled]="option.disabled"
+            [disabled]="option.disabled"
+            [attr.aria-selected]="isSelected(option)"
+            [attr.title]="optionTooltip(option)"
+            (click)="select(option)"
+            (keydown)="onOptionKeydown($event, index)"
+          >
+            <span class="select-copy">
+              <span class="select-option-label">{{ option.label }}</span>
+              <span class="select-hint" *ngIf="option.hint">{{ option.hint }}</span>
+            </span>
+            <span class="select-option-aside">
+              <span class="select-badge" *ngIf="option.variant === 'action' && !isSelected(option)">Novo</span>
+              <span class="select-check" *ngIf="isSelected(option)" aria-hidden="true">←</span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="select-option-remove"
+            *ngIf="option.removable"
+            [attr.aria-label]="option.removeAriaLabel || ('Excluir ' + option.label)"
+            (click)="requestRemove(option, $event)"
+          >
+            <span class="select-option-remove-icon" aria-hidden="true">×</span>
+          </button>
+        </div>
 
         <div class="select-empty" *ngIf="options.length === 0">{{ emptyLabel }}</div>
       </div>
@@ -81,7 +100,7 @@ export interface SelectFieldOption<T = string | number> {
 
     .select-trigger {
       width: 100%;
-      min-height: 3.5rem;
+      min-height: var(--field-min-height, 3.5rem);
       border: 1px solid var(--field-border);
       border-radius: 16px;
       padding: 0.85rem 1rem;
@@ -93,6 +112,7 @@ export interface SelectFieldOption<T = string | number> {
       gap: 0.75rem;
       box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.85),
+        0 0 0 1px rgba(36, 73, 61, 0.05),
         0 1px 0 rgba(255, 255, 255, 0.5);
       transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
       font: inherit;
@@ -194,6 +214,17 @@ export interface SelectFieldOption<T = string | number> {
       overflow-y: auto;
     }
 
+    .select-option-row + .select-option-row {
+      margin-top: 0.18rem;
+    }
+
+    .select-option-row.has-remove {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.35rem;
+      align-items: stretch;
+    }
+
     .select-option {
       width: 100%;
       border: 1px solid transparent;
@@ -246,6 +277,33 @@ export interface SelectFieldOption<T = string | number> {
       color: #8fa096;
     }
 
+    .select-option-remove {
+      width: 2.8rem;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      background: transparent;
+      color: #8e6666;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    }
+
+    .select-option-remove:hover,
+    .select-option-remove:focus-visible {
+      background: rgba(194, 59, 59, 0.08);
+      border-color: rgba(194, 59, 59, 0.14);
+      color: #b23838;
+      transform: translateY(-1px);
+      outline: none;
+    }
+
+    .select-option-remove-icon {
+      font-size: 1.35rem;
+      line-height: 1;
+      transform: translateY(-1px);
+    }
+
     .select-option-aside {
       display: flex;
       align-items: center;
@@ -292,6 +350,7 @@ export class SelectFieldComponent<T = string | number> implements ControlValueAc
   @Input() emptyLabel = 'Nenhuma opção disponível';
   @Input() options: Array<SelectFieldOption<T>> = [];
   @Input() uiDisabled = false;
+  @Output() removeOption = new EventEmitter<SelectFieldOption<T>>();
 
   value: T | null = null;
   private controlDisabled = false;
@@ -356,8 +415,20 @@ export class SelectFieldComponent<T = string | number> implements ControlValueAc
     return this.compareValues(option.value, this.value);
   }
 
+  requestRemove(option: SelectFieldOption<T>, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.onTouched();
+    this.close();
+    this.removeOption.emit(option);
+  }
+
   markAsTouched(): void {
     this.onTouched();
+  }
+
+  optionTooltip(option: SelectFieldOption<T>): string {
+    return option.hint ? `${option.label} - ${option.hint}` : option.label;
   }
 
   onTriggerKeydown(event: KeyboardEvent): void {

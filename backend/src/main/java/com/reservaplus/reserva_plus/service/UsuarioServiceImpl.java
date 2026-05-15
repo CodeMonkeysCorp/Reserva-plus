@@ -7,6 +7,7 @@ import com.reservaplus.reserva_plus.exception.NotFoundException;
 import com.reservaplus.reserva_plus.model.UserRole;
 import com.reservaplus.reserva_plus.model.Usuario;
 import com.reservaplus.reserva_plus.repository.UsuarioRepository;
+import com.reservaplus.reserva_plus.support.EmailAddressSupport;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +38,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Transactional
     public UsuarioAdminResponse updateAdminData(Long usuarioId, UsuarioAdminUpdateRequest request, String actorEmail) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
-                .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
+                .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
 
         validateRoleChange(usuario, request.getRole(), actorEmail);
 
@@ -55,8 +56,8 @@ public class UsuarioServiceImpl implements UsuarioService {
             return;
         }
 
-        if (usuario.getEmail().equalsIgnoreCase(actorEmail)) {
-            throw new BadRequestException("Você não pode alterar o próprio perfil de acesso.");
+        if (EmailAddressSupport.sameEmail(usuario.getEmail(), actorEmail)) {
+            throw new BadRequestException("Voce nao pode alterar o proprio perfil de acesso.");
         }
 
         if (usuario.getRole() == UserRole.ADMIN && newRole != UserRole.ADMIN) {

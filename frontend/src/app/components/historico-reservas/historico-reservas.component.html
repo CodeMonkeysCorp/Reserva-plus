@@ -1,10 +1,8 @@
-<section class="history-page">
-  <article class="card-soft page-card">
-    <div class="page-head">
-      <div>
-        <h1 class="page-title">{{ pageTitle }}</h1>
-        <p class="page-subtitle">{{ pageSubtitle }}</p>
-      </div>
+<section class="history-page page-stack">
+  <article class="card-soft page-hero page-card">
+    <div class="page-hero-copy">
+      <h1 class="page-hero-title">{{ pageTitle }}</h1>
+      <p class="page-hero-subtitle">{{ pageSubtitle }}</p>
     </div>
   </article>
 
@@ -13,7 +11,10 @@
 
   <article class="card-soft filters-card">
     <div class="filters-head">
-      <h2>Filtros</h2>
+      <div class="section-copy">
+        <h2 class="section-title">Filtros</h2>
+        <p class="section-subtitle">Use os filtros para navegar pela agenda e acompanhar o histórico com mais rapidez.</p>
+      </div>
       <button type="button" class="btn btn-sm btn-outline-secondary" (click)="clearFilters()" [disabled]="!hasActiveFilters">
         Limpar filtros
       </button>
@@ -36,19 +37,24 @@
       </div>
 
       <div>
-        <label class="form-label" for="filtroData">Data</label>
-        <app-date-field formControlName="data" [clearable]="true"></app-date-field>
+        <label class="form-label" for="filtroDataInicial">Data inicial</label>
+        <app-date-field formControlName="dataInicial" [max]="form.controls.dataFinal.value"></app-date-field>
+      </div>
+
+      <div>
+        <label class="form-label" for="filtroDataFinal">Data final</label>
+        <app-date-field formControlName="dataFinal" [min]="form.controls.dataInicial.value"></app-date-field>
       </div>
     </form>
   </article>
 
   <article class="card-soft list-card">
     <div class="results-head">
-      <div>
-        <h2>{{ pageTitle }}</h2>
+      <div class="section-copy">
+        <h2 class="section-title">Reservas registradas</h2>
       </div>
 
-      <span class="results-count">{{ resultsLabel }}</span>
+      <span class="section-meta results-count">{{ resultsLabel }}</span>
     </div>
 
     <div class="inline-cancel-card" *ngIf="pendingCancel as reserva">
@@ -138,7 +144,6 @@
         <div class="empty-state">
           <h3>{{ emptyStateTitle }}</h3>
           <p>{{ emptyStateDescription }}</p>
-          <a class="btn btn-brand text-white" routerLink="/reservas">Ir para reservas</a>
         </div>
       </ng-template>
     </ng-container>

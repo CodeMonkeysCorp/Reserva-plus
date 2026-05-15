@@ -1,7 +1,18 @@
-<section class="reserva-grid">
+<section class="reserva-grid page-stack">
+  <article class="card-soft page-hero">
+    <div class="page-hero-copy">
+      <h1 class="page-hero-title">Fazer reserva</h1>
+      <p class="page-hero-subtitle">Escolha o tipo, o espaço e uma data entre hoje e os próximos {{ maxBookingWindowDays }} dias.</p>
+    </div>
+  </article>
+
   <article class="card-soft panel selector-panel">
-    <h1 class="panel-title">Fazer reserva</h1>
-    <p class="panel-subtitle">Escolha o tipo, o espaço e uma data entre hoje e os próximos {{ maxBookingWindowDays }} dias.</p>
+    <div class="section-head">
+      <div class="section-copy">
+        <h2 class="section-title">Configuração da reserva</h2>
+        <p class="section-subtitle">Defina os filtros iniciais antes de selecionar os horários disponíveis.</p>
+      </div>
+    </div>
 
     <div class="alert alert-success py-2" *ngIf="successMessage">{{ successMessage }}</div>
     <div class="alert alert-danger py-2" *ngIf="errorMessage">{{ errorMessage }}</div>
@@ -33,13 +44,40 @@
         </div>
       </div>
 
+      <div class="selected-space-card" *ngIf="selectedEspaco as espaco">
+        <div class="selected-space-media" *ngIf="espaco.imagemUrl; else selectedSpacePlaceholder">
+          <img [src]="espaco.imagemUrl" [alt]="'Imagem de ' + espaco.nome" />
+        </div>
+
+        <ng-template #selectedSpacePlaceholder>
+          <div class="selected-space-media selected-space-media-placeholder">Reserva+</div>
+        </ng-template>
+
+        <div class="selected-space-copy">
+          <div class="selected-space-head">
+            <div>
+              <span class="preview-label">Espaço selecionado</span>
+              <h3>{{ espaco.nome }}</h3>
+            </div>
+            <span class="selected-space-chip">{{ selectedEspacoTipoLabel }}</span>
+          </div>
+
+          <p class="selected-space-meta">Funcionamento: {{ selectedEspacoHorarioLabel }}</p>
+          <p class="selected-space-description" *ngIf="espaco.descricao; else semDescricaoEspaco">{{ espaco.descricao }}</p>
+
+          <ng-template #semDescricaoEspaco>
+            <p class="selected-space-description muted">Esse espaço ainda não possui descrição cadastrada.</p>
+          </ng-template>
+        </div>
+      </div>
+
       <div class="selection-preview">
         <div class="selection-preview-head">
           <div>
             <span class="preview-label">Horários selecionados</span>
             <strong>{{ selectedIntervalLabel }}</strong>
           </div>
-          <span class="selection-count" *ngIf="selectedSlots.length">{{ selectedSlots.length }} bloco(s)</span>
+          <span class="selection-count" *ngIf="selectedSlots.length">{{ selectedSlots.length }} faixa(s)</span>
         </div>
 
         <p class="selection-meta">
@@ -54,11 +92,11 @@
         </div>
 
         <ng-template #semFaixaSelecionada>
-          <p class="helper-note mb-0">Selecione blocos livres consecutivos para montar a reserva.</p>
+          <p class="helper-note mb-0">Selecione horários livres consecutivas para montar a reserva.</p>
         </ng-template>
       </div>
 
-      <div class="form-actions">
+      <div class="form-actions" *ngIf="canCreateReservation || creating">
         <button type="submit" class="btn btn-brand text-white" [disabled]="!canCreateReservation">
           {{ creating ? 'Salvando...' : 'Fazer reserva' }}
         </button>
@@ -67,18 +105,32 @@
   </article>
 
   <article class="card-soft panel agenda-panel">
-    <h2 class="panel-title">Agenda de reservas</h2>
-    <p class="panel-subtitle">Selecione horários livres na grade. Reservas e bloqueios aparecem sinalizados.</p>
+    <div class="section-head">
+      <div class="section-copy">
+        <h2 class="section-title">Agenda de reservas</h2>
+        <p class="section-subtitle">Selecione horários livres na grade.</p>
+      </div>
+    </div>
 
     <section class="agenda-shell">
       <div class="agenda-header">
-        <div>
-          <h3>{{ selectedEspaco?.nome || 'Selecione um espaço' }}</h3>
-          <p class="mb-0">
-            <span *ngIf="selectedEspaco">{{ selectedEspacoTipoLabel }} | </span>
-            {{ form.controls.data.value | date: 'dd/MM/yyyy' }}
-          </p>
-          <p class="mb-0" *ngIf="selectedEspaco">Funcionamento: {{ selectedEspacoHorarioLabel }}</p>
+        <div class="agenda-space-summary">
+          <div class="agenda-space-thumb" *ngIf="selectedEspaco?.imagemUrl; else agendaThumbPlaceholder">
+            <img [src]="selectedEspaco?.imagemUrl || ''" [alt]="'Imagem de ' + (selectedEspaco?.nome || 'espaço')" />
+          </div>
+
+          <ng-template #agendaThumbPlaceholder>
+            <div class="agenda-space-thumb agenda-space-thumb-placeholder">Reserva+</div>
+          </ng-template>
+
+          <div>
+            <h3>{{ selectedEspaco?.nome || 'Selecione um espaço' }}</h3>
+            <p class="mb-0">
+              <span *ngIf="selectedEspaco">{{ selectedEspacoTipoLabel }} | </span>
+              {{ form.controls.data.value | date: 'dd/MM/yyyy' }}
+            </p>
+            <p class="mb-0" *ngIf="selectedEspaco">Funcionamento: {{ selectedEspacoHorarioLabel }}</p>
+          </div>
         </div>
 
         <div class="agenda-legend">

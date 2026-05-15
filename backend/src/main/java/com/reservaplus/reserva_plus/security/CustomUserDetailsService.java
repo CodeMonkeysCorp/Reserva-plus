@@ -2,6 +2,7 @@ package com.reservaplus.reserva_plus.security;
 
 import com.reservaplus.reserva_plus.model.Usuario;
 import com.reservaplus.reserva_plus.repository.UsuarioRepository;
+import com.reservaplus.reserva_plus.support.EmailAddressSupport;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -22,8 +23,8 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Usuario usuario = usuarioRepository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado."));
+        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(EmailAddressSupport.normalize(username))
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario nao encontrado."));
 
         return User.builder()
                 .username(usuario.getEmail())

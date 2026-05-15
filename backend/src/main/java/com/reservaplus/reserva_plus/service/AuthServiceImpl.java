@@ -10,6 +10,7 @@ import com.reservaplus.reserva_plus.model.UserRole;
 import com.reservaplus.reserva_plus.model.Usuario;
 import com.reservaplus.reserva_plus.repository.UsuarioRepository;
 import com.reservaplus.reserva_plus.security.JwtService;
+import com.reservaplus.reserva_plus.support.EmailAddressSupport;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -40,13 +41,15 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (usuarioRepository.existsByEmail(request.getEmail())) {
-            throw new ConflictException("E-mail já cadastrado.");
+        String normalizedEmail = EmailAddressSupport.normalize(request.getEmail());
+
+        if (usuarioRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+            throw new ConflictException("E-mail ja cadastrado.");
         }
 
         Usuario usuario = new Usuario();
         usuario.setNome(request.getNome().trim());
-        usuario.setEmail(request.getEmail().trim().toLowerCase());
+        usuario.setEmail(normalizedEmail);
         usuario.setSenha(passwordEncoder.encode(request.getSenha()));
         usuario.setRole(UserRole.USER);
         usuario = usuarioRepository.save(usuario);
@@ -56,17 +59,23 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        String email = request.getEmail().trim().toLowerCase();
+        String email = EmailAddressSupport.normalize(request.getEmail());
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(email, request.getSenha())
             );
         } catch (BadCredentialsException ex) {
-            throw new BadRequestException("Credenciais inválidas.");
+            throw new BadRequestException("Credenciais invalidas.");
         }
 
-        Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new NotFoundException("Usuário não encontrado."));
+        Usuario usuario = findByEmailOrThrow(email);
+
+        return buildAuthResponse(usuario);
+    }
+
+    @Override
+    public AuthResponse me(String email) {
+        Usuario usuario = findByEmailOrThrow(email);
 
         return buildAuthResponse(usuario);
     }
@@ -74,5 +83,10 @@ public class AuthServiceImpl implements AuthService {
     private AuthResponse buildAuthResponse(Usuario usuario) {
         String token = jwtService.generateToken(usuario.getId(), usuario.getEmail(), usuario.getRole());
         return new AuthResponse(token, usuario.getId(), usuario.getNome(), usuario.getEmail(), usuario.getRole());
+    }
+
+    private Usuario findByEmailOrThrow(String email) {
+        return usuarioRepository.findByEmailIgnoreCase(EmailAddressSupport.normalize(email))
+                .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
     }
 }

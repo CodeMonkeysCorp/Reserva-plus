@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AgendaDia, Espaco, EspacoTipo, ReservaCreatePayload } from '../../core/models';
 import { collectEspacoTipos, formatEspacoTipoLabel } from '../../core/espaco-tipo';
@@ -11,39 +12,23 @@ import { EspacosService } from '../../core/services/espacos.service';
 import { ReservasService } from '../../core/services/reservas.service';
 import { DateFieldComponent } from '../../shared/ui/date-field/date-field.component';
 import { SelectFieldComponent } from '../../shared/ui/select-field/select-field.component';
+import { addDaysToCurrentDate, currentDateInputValue } from '../../shared/utils/date-input.utils';
+import {
+  AgendaSlot,
+  buildAgendaSlots,
+  buildSelectedIntervalLabel,
+  formatTimeRange,
+  slotStatusLabel as getAgendaSlotStatusLabel,
+  toggleContiguousSlotSelection
+} from '../../shared/utils/agenda-slot.utils';
 
 type FiltroTipoEspaco = 'TODOS' | EspacoTipo;
-type AgendaSlotStatus = 'LIVRE' | 'RESERVADO' | 'BLOQUEADO' | 'ENCERRADO';
-
-interface AgendaSlot {
-  index: number;
-  inicio: string;
-  fim: string;
-  status: AgendaSlotStatus;
-  detalhe: string;
-}
 
 const SLOT_DURATION_MINUTES = 60;
 const DEFAULT_OPENING_MINUTES = 6 * 60;
 const DEFAULT_CLOSING_MINUTES = 23 * 60;
 const RESERVA_MAX_DAYS_AHEAD = 7;
 const BOOKING_DATE_RANGE_ERROR = 'bookingDateRange';
-
-function toDateInputValue(date: Date): string {
-  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return localDate.toISOString().split('T')[0];
-}
-
-function currentDateInputValue(): string {
-  return toDateInputValue(new Date());
-}
-
-function addDaysToCurrentDate(days: number): string {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() + days);
-  return toDateInputValue(date);
-}
 
 function bookingDateRangeValidator(maxDaysAhead: number): ValidatorFn {
   return (control: AbstractControl<string | null>): ValidationErrors | null => {
@@ -72,6 +57,7 @@ function bookingDateRangeValidator(maxDaysAhead: number): ValidatorFn {
 export class ReservasComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
   private readonly reservasService = inject(ReservasService);
   private readonly espacosService = inject(EspacosService);
   private readonly authService = inject(AuthService);
@@ -151,52 +137,7 @@ export class ReservasComponent implements OnInit {
   }
 
   toggleSlotSelection(slot: AgendaSlot): void {
-    if (slot.status !== 'LIVRE') {
-      return;
-    }
-
-    const selected = [...this.selectedSlotIndexes].sort((a, b) => a - b);
-    const alreadySelected = selected.includes(slot.index);
-
-    if (alreadySelected) {
-      if (selected.length === 1) {
-        this.clearSelectedSlots();
-        return;
-      }
-
-      if (slot.index === selected[0]) {
-        this.selectedSlotIndexes = selected.slice(1);
-        return;
-      }
-
-      if (slot.index === selected[selected.length - 1]) {
-        this.selectedSlotIndexes = selected.slice(0, -1);
-        return;
-      }
-
-      this.selectedSlotIndexes = [slot.index];
-      return;
-    }
-
-    if (selected.length === 0) {
-      this.selectedSlotIndexes = [slot.index];
-      return;
-    }
-
-    const first = selected[0];
-    const last = selected[selected.length - 1];
-
-    if (slot.index === first - 1) {
-      this.selectedSlotIndexes = [slot.index, ...selected];
-      return;
-    }
-
-    if (slot.index === last + 1) {
-      this.selectedSlotIndexes = [...selected, slot.index];
-      return;
-    }
-
-    this.selectedSlotIndexes = [slot.index];
+    this.selectedSlotIndexes = toggleContiguousSlotSelection(this.selectedSlotIndexes, slot);
   }
 
   isSlotSelected(slot: AgendaSlot): boolean {
@@ -204,23 +145,7 @@ export class ReservasComponent implements OnInit {
   }
 
   slotStatusLabel(slot: AgendaSlot): string {
-    if (this.isSlotSelected(slot)) {
-      return 'Selecionado';
-    }
-
-    if (slot.status === 'LIVRE') {
-      return 'Livre';
-    }
-
-    if (slot.status === 'BLOQUEADO') {
-      return 'Bloqueado';
-    }
-
-    if (slot.status === 'ENCERRADO') {
-      return 'Concluído';
-    }
-
-    return 'Reservado';
+    return getAgendaSlotStatusLabel(slot.status, this.isSlotSelected(slot));
   }
 
   tipoLabel(tipo: EspacoTipo): string {
@@ -281,7 +206,10 @@ export class ReservasComponent implements OnInit {
       return '';
     }
 
-    return `${this.normalizeTime(this.selectedEspaco.horarioFuncionamentoInicio)} às ${this.normalizeTime(this.selectedEspaco.horarioFuncionamentoFim)}`;
+    return formatTimeRange(
+      this.selectedEspaco.horarioFuncionamentoInicio,
+      this.selectedEspaco.horarioFuncionamentoFim
+    );
   }
 
   get selectedSlots(): AgendaSlot[] {
@@ -289,13 +217,7 @@ export class ReservasComponent implements OnInit {
   }
 
   get selectedIntervalLabel(): string {
-    if (this.selectedSlots.length === 0) {
-      return 'Nenhum horário selecionado';
-    }
-
-    const primeiraFaixa = this.selectedSlots[0];
-    const ultimaFaixa = this.selectedSlots[this.selectedSlots.length - 1];
-    return `${primeiraFaixa.inicio} às ${ultimaFaixa.fim}`;
+    return buildSelectedIntervalLabel(this.selectedSlots);
   }
 
   get canCreateReservation(): boolean {
@@ -349,6 +271,7 @@ export class ReservasComponent implements OnInit {
       .subscribe({
         next: (espacos) => {
           this.espacos = [...espacos].sort((a, b) => a.nome.localeCompare(b.nome));
+          this.applyInitialEspacoFromQuery();
           this.ensureEspacoSelecionado();
           this.loadAgenda();
         },
@@ -370,6 +293,28 @@ export class ReservasComponent implements OnInit {
     this.form.controls.espacoId.setValue(fallbackEspacoId);
   }
 
+  private applyInitialEspacoFromQuery(): void {
+    const espacoIdParam = this.route.snapshot.queryParamMap.get('espacoId');
+    const espacoId = Number(espacoIdParam);
+
+    if (!Number.isInteger(espacoId) || espacoId <= 0) {
+      return;
+    }
+
+    const espacoSelecionado = this.espacos.find((espaco) => espaco.id === espacoId && espaco.ativo);
+    if (!espacoSelecionado) {
+      return;
+    }
+
+    this.form.patchValue(
+      {
+        tipo: espacoSelecionado.tipo,
+        espacoId: espacoSelecionado.id
+      },
+      { emitEvent: false }
+    );
+  }
+
   private loadAgenda(): void {
     const espacoId = this.form.controls.espacoId.value;
     const data = this.form.controls.data.value;
@@ -388,7 +333,14 @@ export class ReservasComponent implements OnInit {
       .subscribe({
         next: (agenda) => {
           this.agenda = agenda;
-          this.agendaSlots = this.buildAgendaSlots(agenda);
+          this.agendaSlots = buildAgendaSlots(agenda, {
+            openingTime: this.selectedEspaco?.horarioFuncionamentoInicio,
+            closingTime: this.selectedEspaco?.horarioFuncionamentoFim,
+            fallbackOpeningMinutes: DEFAULT_OPENING_MINUTES,
+            fallbackClosingMinutes: DEFAULT_CLOSING_MINUTES,
+            slotDurationMinutes: SLOT_DURATION_MINUTES,
+            isPastSlot: (slotStartMinutes) => this.isPastSlot(slotStartMinutes)
+          });
         },
         error: (error: unknown) => {
           this.agenda = null;
@@ -398,76 +350,8 @@ export class ReservasComponent implements OnInit {
       });
   }
 
-  private buildAgendaSlots(agenda: AgendaDia): AgendaSlot[] {
-    const slots: AgendaSlot[] = [];
-    const startMinutes = this.resolveOpeningMinutes(this.selectedEspaco?.horarioFuncionamentoInicio, DEFAULT_OPENING_MINUTES);
-    const endMinutes = this.resolveOpeningMinutes(this.selectedEspaco?.horarioFuncionamentoFim, DEFAULT_CLOSING_MINUTES);
-
-    let index = 0;
-    for (let start = startMinutes; start + SLOT_DURATION_MINUTES <= endMinutes; start += SLOT_DURATION_MINUTES) {
-      const end = start + SLOT_DURATION_MINUTES;
-      const inicio = this.minutesToTime(start);
-      const fim = this.minutesToTime(end);
-      const bloqueio = agenda.bloqueios.find((item) => this.hasOverlap(start, end, item.horarioInicio, item.horarioFim));
-      const reserva = agenda.reservasAtivas.find((item) => this.hasOverlap(start, end, item.horarioInicio, item.horarioFim));
-
-      if (bloqueio) {
-        slots.push({
-          index,
-          inicio,
-          fim,
-          status: 'BLOQUEADO',
-          detalhe: bloqueio.motivo?.trim() || ''
-        });
-        index += 1;
-        continue;
-      }
-
-      if (reserva) {
-        slots.push({
-          index,
-          inicio,
-          fim,
-          status: 'RESERVADO',
-          detalhe: ''
-        });
-        index += 1;
-        continue;
-      }
-
-      if (this.isPastSlot(start)) {
-        slots.push({
-          index,
-          inicio,
-          fim,
-          status: 'ENCERRADO',
-          detalhe: 'Horário concluído.'
-        });
-        index += 1;
-        continue;
-      }
-
-      slots.push({
-        index,
-        inicio,
-        fim,
-        status: 'LIVRE',
-        detalhe: ''
-      });
-      index += 1;
-    }
-
-    return slots;
-  }
-
   private clearSelectedSlots(): void {
     this.selectedSlotIndexes = [];
-  }
-
-  private hasOverlap(slotStart: number, slotEnd: number, start: string, end: string): boolean {
-    const faixaInicio = this.timeToMinutes(start);
-    const faixaFim = this.timeToMinutes(end);
-    return slotStart < faixaFim && slotEnd > faixaInicio;
   }
 
   private isPastSlot(startMinutes: number): boolean {
@@ -482,31 +366,5 @@ export class ReservasComponent implements OnInit {
   private currentMinutes(): number {
     const now = new Date();
     return now.getHours() * 60 + now.getMinutes();
-  }
-
-  private minutesToTime(value: number): string {
-    const hours = Math.floor(value / 60)
-      .toString()
-      .padStart(2, '0');
-    const minutes = (value % 60).toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
-  }
-
-  private timeToMinutes(value: string): number {
-    const [hours, minutes] = value.split(':').map((part) => Number(part));
-    return hours * 60 + minutes;
-  }
-
-  private normalizeTime(value: string | null | undefined): string {
-    return (value ?? '').slice(0, 5);
-  }
-
-  private resolveOpeningMinutes(value: string | null | undefined, fallback: number): number {
-    const normalized = this.normalizeTime(value);
-    if (!normalized) {
-      return fallback;
-    }
-
-    return this.timeToMinutes(normalized);
   }
 }

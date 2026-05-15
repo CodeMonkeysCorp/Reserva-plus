@@ -3,7 +3,7 @@ import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
-import { AgendaDia, Bloqueio, BloqueioPayload, Espaco, EspacoTipo } from '../../core/models';
+import { AgendaDia, Bloqueio, BloqueioPayload, BloqueioRotina, Espaco, EspacoTipo } from '../../core/models';
 import { formatEspacoTipoLabel } from '../../core/espaco-tipo';
 import { ApiErrorService } from '../../core/services/api-error.service';
 import { BloqueiosService } from '../../core/services/bloqueios.service';
@@ -11,16 +11,15 @@ import { EspacosService } from '../../core/services/espacos.service';
 import { ReservasService } from '../../core/services/reservas.service';
 import { DateFieldComponent } from '../../shared/ui/date-field/date-field.component';
 import { SelectFieldComponent } from '../../shared/ui/select-field/select-field.component';
-
-type AgendaSlotStatus = 'LIVRE' | 'RESERVADO' | 'BLOQUEADO';
-
-interface AgendaSlot {
-  index: number;
-  inicio: string;
-  fim: string;
-  status: AgendaSlotStatus;
-  detalhe: string;
-}
+import { addWeeksToDateInput, currentDateInputValue } from '../../shared/utils/date-input.utils';
+import {
+  AgendaSlot,
+  buildAgendaSlots,
+  buildSelectedIntervalLabel,
+  formatTimeRange,
+  slotStatusLabel as getAgendaSlotStatusLabel,
+  toggleContiguousSlotSelection
+} from '../../shared/utils/agenda-slot.utils';
 
 interface DeleteActionState {
   bloqueioId: number;
@@ -45,17 +44,19 @@ export class BloqueiosComponent implements OnInit {
   private readonly espacosService = inject(EspacosService);
   private readonly reservasService = inject(ReservasService);
   private readonly apiErrorService = inject(ApiErrorService);
+  private readonly weekdayFormatter = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' });
 
   readonly form = this.fb.nonNullable.group({
     espacoId: [0, [Validators.required, Validators.min(1)]],
-    data: [this.today(), [Validators.required]],
+    data: [currentDateInputValue(), [Validators.required]],
     motivo: ['', [Validators.maxLength(300)]],
     recorrenteSemanal: [false],
-    dataFimRecorrencia: [this.addWeeks(this.today(), 4)]
+    dataFimRecorrencia: [addWeeksToDateInput(currentDateInputValue(), 4)]
   });
 
   espacos: Espaco[] = [];
   bloqueios: Bloqueio[] = [];
+  rotinas: BloqueioRotina[] = [];
   agenda: AgendaDia | null = null;
   agendaSlots: AgendaSlot[] = [];
   selectedSlotIndexes: number[] = [];
@@ -63,8 +64,9 @@ export class BloqueiosComponent implements OnInit {
 
   loadingEspacos = true;
   loadingAgenda = false;
+  loadingRotinas = false;
   saving = false;
-  readonly minDate = this.today();
+  readonly minDate = currentDateInputValue();
 
   successMessage = '';
   errorMessage = '';
@@ -111,8 +113,9 @@ export class BloqueiosComponent implements OnInit {
           this.successMessage = recorrenteSemanal
             ? `Série semanal criada com sucesso para ${this.recurrenceOccurrencesCount} ocorrência(s).`
             : 'Bloqueio criado com sucesso.';
-          this.clearSelectedSlots();
+          this.resetSelectionState();
           this.loadAgenda();
+          this.loadRotinas();
         },
         error: (error: unknown) => {
           this.errorMessage = this.apiErrorService.toMessage(error, 'Falha ao criar bloqueio.');
@@ -121,52 +124,7 @@ export class BloqueiosComponent implements OnInit {
   }
 
   toggleSlotSelection(slot: AgendaSlot): void {
-    if (slot.status !== 'LIVRE') {
-      return;
-    }
-
-    const selected = [...this.selectedSlotIndexes].sort((a, b) => a - b);
-    const alreadySelected = selected.includes(slot.index);
-
-    if (alreadySelected) {
-      if (selected.length === 1) {
-        this.clearSelectedSlots();
-        return;
-      }
-
-      if (slot.index === selected[0]) {
-        this.selectedSlotIndexes = selected.slice(1);
-        return;
-      }
-
-      if (slot.index === selected[selected.length - 1]) {
-        this.selectedSlotIndexes = selected.slice(0, -1);
-        return;
-      }
-
-      this.selectedSlotIndexes = [slot.index];
-      return;
-    }
-
-    if (selected.length === 0) {
-      this.selectedSlotIndexes = [slot.index];
-      return;
-    }
-
-    const first = selected[0];
-    const last = selected[selected.length - 1];
-
-    if (slot.index === first - 1) {
-      this.selectedSlotIndexes = [slot.index, ...selected];
-      return;
-    }
-
-    if (slot.index === last + 1) {
-      this.selectedSlotIndexes = [...selected, slot.index];
-      return;
-    }
-
-    this.selectedSlotIndexes = [slot.index];
+    this.selectedSlotIndexes = toggleContiguousSlotSelection(this.selectedSlotIndexes, slot);
   }
 
   isSlotSelected(slot: AgendaSlot): boolean {
@@ -174,19 +132,7 @@ export class BloqueiosComponent implements OnInit {
   }
 
   slotStatusLabel(slot: AgendaSlot): string {
-    if (this.isSlotSelected(slot)) {
-      return 'Selecionado';
-    }
-
-    if (slot.status === 'LIVRE') {
-      return 'Livre';
-    }
-
-    if (slot.status === 'BLOQUEADO') {
-      return 'Bloqueado';
-    }
-
-    return 'Reservado';
+    return getAgendaSlotStatusLabel(slot.status, this.isSlotSelected(slot));
   }
 
   removeBloqueio(bloqueio: Bloqueio, removerSerie = false): void {
@@ -203,9 +149,10 @@ export class BloqueiosComponent implements OnInit {
       .subscribe({
         next: () => {
           this.successMessage = removerSerie
-            ? 'Todos os bloqueios da rotina foram removidos com sucesso.'
+            ? 'A rotina semanal foi removida com sucesso.'
             : 'Bloqueio removido com sucesso.';
           this.loadAgenda();
+          this.loadRotinas();
         },
         error: (error: unknown) => {
           this.errorMessage = this.apiErrorService.toMessage(error, 'Falha ao remover bloqueio.');
@@ -213,8 +160,35 @@ export class BloqueiosComponent implements OnInit {
       });
   }
 
+  removeRotina(rotina: BloqueioRotina): void {
+    if (this.deletingAction) {
+      return;
+    }
+
+    this.successMessage = '';
+    this.errorMessage = '';
+    this.deletingAction = { bloqueioId: rotina.id, removerSerie: true };
+    this.bloqueiosService
+      .delete(rotina.id, true)
+      .pipe(finalize(() => (this.deletingAction = null)))
+      .subscribe({
+        next: () => {
+          this.successMessage = 'A rotina semanal foi removida com sucesso.';
+          this.loadAgenda();
+          this.loadRotinas();
+        },
+        error: (error: unknown) => {
+          this.errorMessage = this.apiErrorService.toMessage(error, 'Falha ao remover rotina.');
+        }
+      });
+  }
+
   isDeleting(bloqueio: Bloqueio, removerSerie = false): boolean {
     return this.deletingAction?.bloqueioId === bloqueio.id && this.deletingAction.removerSerie === removerSerie;
+  }
+
+  isDeletingRotina(rotina: BloqueioRotina): boolean {
+    return this.deletingAction?.bloqueioId === rotina.id && this.deletingAction.removerSerie;
   }
 
   get deleting(): boolean {
@@ -241,7 +215,10 @@ export class BloqueiosComponent implements OnInit {
       return '';
     }
 
-    return `${this.normalizeTime(this.selectedEspaco.horarioFuncionamentoInicio)} às ${this.normalizeTime(this.selectedEspaco.horarioFuncionamentoFim)}`;
+    return formatTimeRange(
+      this.selectedEspaco.horarioFuncionamentoInicio,
+      this.selectedEspaco.horarioFuncionamentoFim
+    );
   }
 
   get selectedSlots(): AgendaSlot[] {
@@ -249,17 +226,14 @@ export class BloqueiosComponent implements OnInit {
   }
 
   get selectedIntervalLabel(): string {
-    if (this.selectedSlots.length === 0) {
-      return 'Nenhum horário selecionado';
-    }
-
-    const primeiraFaixa = this.selectedSlots[0];
-    const ultimaFaixa = this.selectedSlots[this.selectedSlots.length - 1];
-    return `${primeiraFaixa.inicio} às ${ultimaFaixa.fim}`;
+    return buildSelectedIntervalLabel(this.selectedSlots);
   }
 
   get canCreateBlock(): boolean {
-    return !this.saving && this.form.valid && this.selectedSlots.length > 0 && (!this.isRecurringEnabled || !!this.form.controls.dataFimRecorrencia.value);
+    return !this.saving
+      && this.form.valid
+      && this.selectedSlots.length > 0
+      && (!this.isRecurringEnabled || !!this.form.controls.dataFimRecorrencia.value);
   }
 
   get motivoLength(): number {
@@ -303,23 +277,29 @@ export class BloqueiosComponent implements OnInit {
     return !!bloqueio.serieRecorrenciaId;
   }
 
+  recurrenceDayLabel(dateValue: string): string {
+    const label = this.weekdayFormatter.format(new Date(`${dateValue}T12:00:00`));
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  }
+
   private observeFilters(): void {
     this.form.controls.espacoId.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
-        this.clearSelectedSlots();
+        this.resetSelectionState();
         this.loadAgenda();
+        this.loadRotinas();
       });
 
     this.form.controls.data.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((data) => {
-        this.clearSelectedSlots();
+        this.resetSelectionState();
 
         if (this.isRecurringEnabled) {
           const dataFimAtual = this.form.controls.dataFimRecorrencia.value;
           if (!dataFimAtual || dataFimAtual < data) {
-            this.form.controls.dataFimRecorrencia.setValue(this.addWeeks(data, 4), { emitEvent: false });
+            this.form.controls.dataFimRecorrencia.setValue(addWeeksToDateInput(data, 4), { emitEvent: false });
           }
         }
 
@@ -333,12 +313,15 @@ export class BloqueiosComponent implements OnInit {
           const dataInicio = this.form.controls.data.value;
           const dataFimAtual = this.form.controls.dataFimRecorrencia.value;
           if (!dataFimAtual || dataFimAtual < dataInicio) {
-            this.form.controls.dataFimRecorrencia.setValue(this.addWeeks(dataInicio, 4), { emitEvent: false });
+            this.form.controls.dataFimRecorrencia.setValue(addWeeksToDateInput(dataInicio, 4), { emitEvent: false });
           }
           return;
         }
 
-        this.form.controls.dataFimRecorrencia.setValue(this.addWeeks(this.form.controls.data.value, 4), { emitEvent: false });
+        this.form.controls.dataFimRecorrencia.setValue(
+          addWeeksToDateInput(this.form.controls.data.value, 4),
+          { emitEvent: false }
+        );
       });
   }
 
@@ -349,7 +332,7 @@ export class BloqueiosComponent implements OnInit {
       .pipe(finalize(() => (this.loadingEspacos = false)))
       .subscribe({
         next: (espacos) => {
-          this.espacos = espacos.sort((a, b) => a.nome.localeCompare(b.nome));
+          this.espacos = [...espacos].sort((a, b) => a.nome.localeCompare(b.nome));
 
           if (this.espacos.length > 0 && this.form.controls.espacoId.value === 0) {
             this.form.patchValue({ espacoId: this.espacos[0].id });
@@ -357,9 +340,37 @@ export class BloqueiosComponent implements OnInit {
           }
 
           this.loadAgenda();
+          this.loadRotinas();
         },
         error: (error: unknown) => {
           this.errorMessage = this.apiErrorService.toMessage(error, 'Falha ao carregar espaços.');
+        }
+      });
+  }
+
+  private loadRotinas(): void {
+    const espacoId = this.form.controls.espacoId.value;
+
+    this.rotinas = [];
+
+    if (espacoId <= 0) {
+      return;
+    }
+
+    this.loadingRotinas = true;
+    this.bloqueiosService
+      .listRecurring(espacoId)
+      .pipe(finalize(() => (this.loadingRotinas = false)))
+      .subscribe({
+        next: (rotinas) => {
+          this.rotinas = [...rotinas].sort((a, b) => {
+            const compareData = a.dataInicio.localeCompare(b.dataInicio);
+            return compareData !== 0 ? compareData : a.horarioInicio.localeCompare(b.horarioInicio);
+          });
+        },
+        error: (error: unknown) => {
+          this.rotinas = [];
+          this.errorMessage = this.apiErrorService.toMessage(error, 'Falha ao carregar rotinas semanais.');
         }
       });
   }
@@ -384,7 +395,14 @@ export class BloqueiosComponent implements OnInit {
         next: (agenda) => {
           this.agenda = agenda;
           this.bloqueios = [...agenda.bloqueios].sort((a, b) => a.horarioInicio.localeCompare(b.horarioInicio));
-          this.agendaSlots = this.buildAgendaSlots(agenda);
+          this.agendaSlots = buildAgendaSlots(agenda, {
+            openingTime: this.selectedEspaco?.horarioFuncionamentoInicio,
+            closingTime: this.selectedEspaco?.horarioFuncionamentoFim,
+            fallbackOpeningMinutes: DEFAULT_OPENING_MINUTES,
+            fallbackClosingMinutes: DEFAULT_CLOSING_MINUTES,
+            slotDurationMinutes: SLOT_DURATION_MINUTES,
+            isPastSlot: (_slotStartMinutes, slotEndMinutes) => this.isPastSlot(slotEndMinutes)
+          });
         },
         error: (error: unknown) => {
           this.agenda = null;
@@ -395,101 +413,25 @@ export class BloqueiosComponent implements OnInit {
       });
   }
 
-  private buildAgendaSlots(agenda: AgendaDia): AgendaSlot[] {
-    const slots: AgendaSlot[] = [];
-    const startMinutes = this.resolveOpeningMinutes(this.selectedEspaco?.horarioFuncionamentoInicio, DEFAULT_OPENING_MINUTES);
-    const endMinutes = this.resolveOpeningMinutes(this.selectedEspaco?.horarioFuncionamentoFim, DEFAULT_CLOSING_MINUTES);
-
-    let index = 0;
-    for (let start = startMinutes; start + SLOT_DURATION_MINUTES <= endMinutes; start += SLOT_DURATION_MINUTES) {
-      const end = start + SLOT_DURATION_MINUTES;
-      const inicio = this.minutesToTime(start);
-      const fim = this.minutesToTime(end);
-      const bloqueio = agenda.bloqueios.find((item) => this.hasOverlap(start, end, item.horarioInicio, item.horarioFim));
-      const reserva = agenda.reservasAtivas.find((item) => this.hasOverlap(start, end, item.horarioInicio, item.horarioFim));
-
-      if (bloqueio) {
-        slots.push({
-          index,
-          inicio,
-          fim,
-          status: 'BLOQUEADO',
-          detalhe: bloqueio.motivo?.trim() || ''
-        });
-        index += 1;
-        continue;
-      }
-
-      if (reserva) {
-        slots.push({
-          index,
-          inicio,
-          fim,
-          status: 'RESERVADO',
-          detalhe: ''
-        });
-        index += 1;
-        continue;
-      }
-
-      slots.push({
-        index,
-        inicio,
-        fim,
-        status: 'LIVRE',
-        detalhe: ''
-      });
-      index += 1;
-    }
-
-    return slots;
-  }
-
   private clearSelectedSlots(): void {
     this.selectedSlotIndexes = [];
   }
 
-  private hasOverlap(slotStart: number, slotEnd: number, start: string, end: string): boolean {
-    const faixaInicio = this.timeToMinutes(start);
-    const faixaFim = this.timeToMinutes(end);
-    return slotStart < faixaFim && slotEnd > faixaInicio;
+  private resetSelectionState(): void {
+    this.clearSelectedSlots();
   }
 
-  private today(): string {
-    const now = new Date();
-    const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-    return localDate.toISOString().split('T')[0];
-  }
-
-  private addWeeks(dateValue: string, weeks: number): string {
-    const date = new Date(`${dateValue}T00:00:00`);
-    date.setDate(date.getDate() + weeks * 7);
-    return date.toISOString().split('T')[0];
-  }
-
-  private normalizeTime(value: string | null | undefined): string {
-    return (value ?? '').slice(0, 5);
-  }
-
-  private resolveOpeningMinutes(value: string | null | undefined, fallback: number): number {
-    const normalized = this.normalizeTime(value);
-    if (!normalized) {
-      return fallback;
+  private isPastSlot(endMinutes: number): boolean {
+    const selectedDate = this.form.controls.data.value;
+    if (!selectedDate || selectedDate !== currentDateInputValue()) {
+      return false;
     }
 
-    return this.timeToMinutes(normalized);
+    return endMinutes <= this.currentMinutes();
   }
 
-  private timeToMinutes(value: string): number {
-    const [hours, minutes] = value.split(':').map((part) => Number(part));
-    return hours * 60 + minutes;
-  }
-
-  private minutesToTime(value: number): string {
-    const hours = Math.floor(value / 60)
-      .toString()
-      .padStart(2, '0');
-    const minutes = (value % 60).toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
+  private currentMinutes(): number {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
   }
 }

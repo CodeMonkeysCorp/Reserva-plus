@@ -1,29 +1,38 @@
 package com.reservaplus.reserva_plus.service;
 
+import com.reservaplus.reserva_plus.config.R2StorageProperties;
 import com.reservaplus.reserva_plus.dto.espaco.EspacoRequest;
 import com.reservaplus.reserva_plus.dto.espaco.EspacoResponse;
 import com.reservaplus.reserva_plus.exception.BadRequestException;
 import com.reservaplus.reserva_plus.exception.NotFoundException;
 import com.reservaplus.reserva_plus.model.Espaco;
 import com.reservaplus.reserva_plus.repository.EspacoRepository;
+import com.reservaplus.reserva_plus.storage.StorageService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalTime;
-import java.util.Locale;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class EspacoServiceImpl implements EspacoService {
 
-    private static final LocalTime HORARIO_PADRAO_INICIO = LocalTime.of(6, 0);
-    private static final LocalTime HORARIO_PADRAO_FIM = LocalTime.of(23, 0);
     private static final int TIPO_MAX_LENGTH = 60;
 
     private final EspacoRepository espacoRepository;
+    private final StorageService storageService;
+    private final R2StorageProperties storageProperties;
 
-    public EspacoServiceImpl(EspacoRepository espacoRepository) {
+    public EspacoServiceImpl(
+            EspacoRepository espacoRepository,
+            StorageService storageService,
+            R2StorageProperties storageProperties
+    ) {
         this.espacoRepository = espacoRepository;
+        this.storageService = storageService;
+        this.storageProperties = storageProperties;
     }
 
     @Override
@@ -56,8 +65,11 @@ public class EspacoServiceImpl implements EspacoService {
     public EspacoResponse update(Long id, EspacoRequest request) {
         Espaco espaco = espacoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Espaco nao encontrado."));
+        String previousImageObjectKey = espaco.getImagemObjectKey();
         applyRequest(espaco, request);
-        return toResponse(espacoRepository.save(espaco));
+        Espaco savedEspaco = espacoRepository.save(espaco);
+        deletePreviousImageIfReplaced(previousImageObjectKey, savedEspaco.getImagemObjectKey());
+        return toResponse(savedEspaco);
     }
 
     @Override
@@ -66,22 +78,33 @@ public class EspacoServiceImpl implements EspacoService {
         Espaco espaco = espacoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Espaco nao encontrado."));
         espacoRepository.delete(espaco);
+        deleteManagedImageIfPresent(espaco.getImagemObjectKey());
     }
 
     private void applyRequest(Espaco espaco, EspacoRequest request) {
-        LocalTime horarioInicio = request.getHorarioFuncionamentoInicio() != null
-                ? request.getHorarioFuncionamentoInicio()
-                : HORARIO_PADRAO_INICIO;
-        LocalTime horarioFim = request.getHorarioFuncionamentoFim() != null
-                ? request.getHorarioFuncionamentoFim()
-                : HORARIO_PADRAO_FIM;
+        LocalTime horarioInicio = HorarioFuncionamentoSupport.resolveOrDefault(
+                request.getHorarioFuncionamentoInicio(),
+                HorarioFuncionamentoSupport.HORARIO_PADRAO_INICIO
+        );
+        LocalTime horarioFim = HorarioFuncionamentoSupport.resolveOrDefault(
+                request.getHorarioFuncionamentoFim(),
+                HorarioFuncionamentoSupport.HORARIO_PADRAO_FIM
+        );
+        boolean destaque = request.getDestaque() != null ? request.getDestaque() : espaco.isDestaque();
 
-        validateHorarioFuncionamento(horarioInicio, horarioFim);
+        HorarioFuncionamentoSupport.validateHoraCheia(
+                horarioInicio,
+                horarioFim,
+                "Os horarios de funcionamento devem ser configurados em hora cheia.",
+                "O horario final de funcionamento deve ser maior que o inicial."
+        );
 
         espaco.setNome(request.getNome().trim());
         espaco.setTipo(normalizeTipo(request.getTipo()));
         espaco.setDescricao(normalizeDescricao(request.getDescricao()));
+        espaco.setImagemObjectKey(normalizeImagemObjectKey(request.getImagemObjectKey()));
         espaco.setAtivo(request.getAtivo() == null || request.getAtivo());
+        espaco.setDestaque(destaque);
         espaco.setHorarioFuncionamentoInicio(horarioInicio);
         espaco.setHorarioFuncionamentoFim(horarioFim);
     }
@@ -92,21 +115,13 @@ public class EspacoServiceImpl implements EspacoService {
         response.setNome(espaco.getNome());
         response.setTipo(espaco.getTipo());
         response.setDescricao(espaco.getDescricao());
+        response.setImagemObjectKey(espaco.getImagemObjectKey());
+        response.setImagemUrl(storageService.resolvePublicUrl(espaco.getImagemObjectKey()));
         response.setAtivo(espaco.isAtivo());
-        response.setHorarioFuncionamentoInicio(resolveHorarioInicio(espaco));
-        response.setHorarioFuncionamentoFim(resolveHorarioFim(espaco));
+        response.setDestaque(espaco.isDestaque());
+        response.setHorarioFuncionamentoInicio(HorarioFuncionamentoSupport.resolveHorarioInicio(espaco));
+        response.setHorarioFuncionamentoFim(HorarioFuncionamentoSupport.resolveHorarioFim(espaco));
         return response;
-    }
-
-    private void validateHorarioFuncionamento(LocalTime inicio, LocalTime fim) {
-        if (inicio.getMinute() != 0 || inicio.getSecond() != 0 || inicio.getNano() != 0
-                || fim.getMinute() != 0 || fim.getSecond() != 0 || fim.getNano() != 0) {
-            throw new BadRequestException("Os horarios de funcionamento devem ser configurados em hora cheia.");
-        }
-
-        if (!fim.isAfter(inicio)) {
-            throw new BadRequestException("O horario final de funcionamento deve ser maior que o inicial.");
-        }
     }
 
     private String normalizeTipo(String tipo) {
@@ -135,11 +150,61 @@ public class EspacoServiceImpl implements EspacoService {
         return normalized.isEmpty() ? null : normalized;
     }
 
-    private LocalTime resolveHorarioInicio(Espaco espaco) {
-        return espaco.getHorarioFuncionamentoInicio() != null ? espaco.getHorarioFuncionamentoInicio() : HORARIO_PADRAO_INICIO;
+    private String normalizeImagemObjectKey(String imagemObjectKey) {
+        if (imagemObjectKey == null) {
+            return null;
+        }
+
+        String normalized = imagemObjectKey.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+
+        while (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+
+        String expectedPrefix = buildExpectedImagePrefix();
+        if (!normalized.startsWith(expectedPrefix)) {
+            throw new BadRequestException("A imagem informada nao pertence ao armazenamento de espacos.");
+        }
+
+        return normalized;
     }
 
-    private LocalTime resolveHorarioFim(Espaco espaco) {
-        return espaco.getHorarioFuncionamentoFim() != null ? espaco.getHorarioFuncionamentoFim() : HORARIO_PADRAO_FIM;
+    private String buildExpectedImagePrefix() {
+        String configuredPrefix = sanitizePathSegment(storageProperties.getObjectKeyPrefix());
+        if (!StringUtils.hasText(configuredPrefix)) {
+            return "espacos/";
+        }
+        return configuredPrefix + "/espacos/";
+    }
+
+    private String sanitizePathSegment(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+
+        String normalized = value.trim().toLowerCase(Locale.ROOT);
+        normalized = normalized.replaceAll("[^a-z0-9/_-]+", "-");
+        normalized = normalized.replaceAll("/{2,}", "/");
+        normalized = normalized.replaceAll("-{2,}", "-");
+        return normalized.replaceAll("^/+|/+$", "");
+    }
+
+    private void deletePreviousImageIfReplaced(String previousImageObjectKey, String currentImageObjectKey) {
+        if (previousImageObjectKey == null || previousImageObjectKey.equals(currentImageObjectKey)) {
+            return;
+        }
+
+        deleteManagedImageIfPresent(previousImageObjectKey);
+    }
+
+    private void deleteManagedImageIfPresent(String imageObjectKey) {
+        if (!StringUtils.hasText(imageObjectKey)) {
+            return;
+        }
+
+        storageService.delete(imageObjectKey);
     }
 }

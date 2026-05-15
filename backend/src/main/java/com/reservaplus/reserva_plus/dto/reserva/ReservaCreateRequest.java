@@ -1,6 +1,5 @@
 package com.reservaplus.reserva_plus.dto.reserva;
 
-import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
@@ -12,7 +11,6 @@ public class ReservaCreateRequest {
     private Long espacoId;
 
     @NotNull(message = "Informe a data da reserva.")
-    @FutureOrPresent(message = "A data da reserva deve ser hoje ou futura.")
     private LocalDate data;
 
     @NotNull(message = "Informe o horário de início.")

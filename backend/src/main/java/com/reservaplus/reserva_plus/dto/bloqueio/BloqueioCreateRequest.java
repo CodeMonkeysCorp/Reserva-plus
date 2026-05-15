@@ -1,6 +1,5 @@
 package com.reservaplus.reserva_plus.dto.bloqueio;
 
-import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -9,25 +8,23 @@ import java.time.LocalTime;
 
 public class BloqueioCreateRequest {
 
-    @NotNull(message = "Selecione o espaco do bloqueio.")
+    @NotNull(message = "Selecione o espaço do bloqueio.")
     private Long espacoId;
 
     @NotNull(message = "Informe a data do bloqueio.")
-    @FutureOrPresent(message = "A data do bloqueio deve ser hoje ou futura.")
     private LocalDate data;
 
-    @NotNull(message = "Informe o horario de inicio.")
+    @NotNull(message = "Informe o horário de início.")
     private LocalTime horarioInicio;
 
-    @NotNull(message = "Informe o horario de fim.")
+    @NotNull(message = "Informe o horário de fim.")
     private LocalTime horarioFim;
 
-    @Size(max = 300, message = "O motivo deve ter no maximo 300 caracteres.")
+    @Size(max = 300, message = "O motivo deve ter no máximo 300 caracteres.")
     private String motivo;
 
     private Boolean recorrenteSemanal;
 
-    @FutureOrPresent(message = "A data final da recorrencia deve ser hoje ou futura.")
     private LocalDate dataFimRecorrencia;
 
     public Long getEspacoId() {

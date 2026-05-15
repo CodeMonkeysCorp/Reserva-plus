@@ -1,0 +1,220 @@
+<section class="admin-shell">
+  <header class="card-soft page-hero">
+    <div class="page-hero-copy">
+      <h1 class="page-hero-title">Painel do sistema</h1>
+      <p class="page-hero-subtitle">
+        Acompanhe reservas, usuários e a distribuição dos espaços em uma leitura rápida do Reserva+.
+      </p>
+    </div>
+  </header>
+
+  <div class="alert alert-danger" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div *ngIf="loading" class="card-soft loading-card">
+    Carregando painel...
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <section class="stats-grid">
+      <article class="card-soft stat-card" *ngFor="let item of dashboardStats; trackBy: trackByLabel">
+        <span class="stat-label">{{ item.label }}</span>
+        <strong class="stat-value">{{ item.value }}</strong>
+      </article>
+    </section>
+
+    <section class="panel-grid">
+      <article class="card-soft insight-card is-wide">
+        <div class="card-head">
+          <div>
+            <h2 class="section-title">Agenda Geral</h2>
+          </div>
+        </div>
+
+        <div class="summary-chip-list">
+          <span
+            class="summary-chip"
+            *ngFor="let item of agendaResumoChips; trackBy: trackByLabel"
+            [class.summary-chip-live]="item.tone === 'live'"
+          >
+            {{ item.label }}: {{ item.value }}
+          </span>
+        </div>
+
+        <div class="reserve-list" *ngIf="agendaReservas.length; else semAgendaReservas">
+          <article class="reserve-item" *ngFor="let item of agendaReservas; trackBy: trackByAgendaReservaId">
+            <div>
+              <div class="reserve-item-head">
+                <strong>{{ item.reserva.espacoNome }}</strong>
+                <span class="reserve-item-badge" *ngIf="item.emAndamento">Acontecendo agora</span>
+              </div>
+              <p class="mb-0">{{ item.reserva.usuarioNome || 'Usuário não identificado' }}</p>
+            </div>
+            <span>
+              {{ item.reserva.data | date: 'dd/MM/yyyy' }}<br />
+              {{ item.reserva.horarioInicio | slice:0:5 }} - {{ item.reserva.horarioFim | slice:0:5 }}
+            </span>
+          </article>
+        </div>
+
+        <div class="pagination-bar" *ngIf="agendaReservas.length">
+          <p class="pagination-summary mb-0">
+            Mostrando {{ agendaShowingStart }}-{{ agendaShowingEnd }} de {{ agendaTotalElements }} reserva(s)
+          </p>
+
+          <div class="pagination-actions" *ngIf="agendaTotalPages > 1">
+            <button
+              type="button"
+              class="pagination-button"
+              (click)="previousAgendaPage()"
+              [disabled]="agendaCurrentPage === 1 || agendaLoading"
+            >
+              Anterior
+            </button>
+
+            <span class="pagination-page">Página {{ agendaCurrentPage }} de {{ agendaTotalPages }}</span>
+
+            <button
+              type="button"
+              class="pagination-button"
+              (click)="nextAgendaPage()"
+              [disabled]="agendaCurrentPage === agendaTotalPages || agendaLoading"
+            >
+              Próxima
+            </button>
+          </div>
+        </div>
+
+        <ng-template #semAgendaReservas>
+          <p class="card-empty mb-0">Nenhuma reserva em andamento ou futura encontrada no momento.</p>
+        </ng-template>
+      </article>
+
+      <article class="card-soft insight-card">
+        <div class="card-head">
+          <div>
+            <h2 class="section-title">Qualidade dos espaços</h2>
+          </div>
+        </div>
+
+        <div class="insight-metric-grid">
+          <article
+            class="insight-metric-item"
+            *ngFor="let item of catalogoInsights; trackBy: trackByLabel"
+            [class.is-warning]="item.tone === 'warning'"
+            [class.is-positive]="item.tone === 'positive'"
+          >
+            <span class="insight-metric-label">{{ item.label }}</span>
+            <strong class="insight-metric-value">{{ item.value }}</strong>
+            <p class="mb-0">{{ item.helper }}</p>
+          </article>
+        </div>
+      </article>
+
+      <article class="card-soft insight-card">
+        <div class="card-head">
+          <div>
+            <h2 class="section-title">Espaços por tipo</h2>
+          </div>
+        </div>
+
+        <div class="type-summary-list" *ngIf="tiposResumo.length; else semTiposResumo">
+          <article class="type-summary-item" *ngFor="let item of tiposResumo; trackBy: trackByTipo">
+            <div class="type-summary-copy">
+              <div class="type-summary-head">
+                <strong>{{ formatTipo(item.tipo) }}</strong>
+                <span>{{ item.total }}</span>
+              </div>
+              <p class="mb-0">{{ item.ativos }} ativo(s) - {{ item.percentual }}% do catálogo</p>
+              <div class="type-summary-bar">
+                <span [style.width.%]="item.percentual"></span>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <ng-template #semTiposResumo>
+          <p class="card-empty mb-0">Os tipos de espaço aparecerão aqui assim que houver cadastros.</p>
+        </ng-template>
+      </article>
+
+      <article class="card-soft insight-card">
+        <div class="card-head">
+          <div>
+            <h2 class="section-title">Espaços mais usados</h2>
+          </div>
+        </div>
+
+        <div class="ranking-list" *ngIf="topEspacos.length; else semRankingEspacos">
+          <article class="ranking-item" *ngFor="let item of topEspacos; let pos = index; trackBy: trackByRankingEspaco">
+            <div class="ranking-main">
+              <span class="ranking-index">{{ pos + 1 }}</span>
+              <div>
+                <div class="ranking-head">
+                  <strong>{{ item.nome }}</strong>
+                  <span class="ranking-badge" *ngIf="item.destaque">Destaque</span>
+                </div>
+                <p class="mb-0">{{ item.tipo ? formatTipo(item.tipo) : 'Sem tipo' }}</p>
+              </div>
+            </div>
+            <span class="ranking-meta">{{ item.totalReservas }} Reserva(s)</span>
+          </article>
+        </div>
+
+        <ng-template #semRankingEspacos>
+          <p class="card-empty mb-0">O ranking será exibido assim que houver reservas registradas.</p>
+        </ng-template>
+      </article>
+
+      <article class="card-soft insight-card">
+        <div class="card-head">
+          <div>
+            <h2 class="section-title">Espaços mais concorridos</h2>
+          </div>
+        </div>
+
+        <div class="ranking-list" *ngIf="espacosConcorridos.length; else semEspacosConcorridos">
+          <article
+            class="ranking-item"
+            *ngFor="let item of espacosConcorridos; let pos = index; trackBy: trackByRankingEspaco"
+          >
+            <div class="ranking-main">
+              <span class="ranking-index">{{ pos + 1 }}</span>
+              <div>
+                <div class="ranking-head">
+                  <strong>{{ item.nome }}</strong>
+                  <span class="ranking-badge" *ngIf="item.destaque">Destaque</span>
+                </div>
+                <p class="mb-0">
+                  {{ item.tipo ? formatTipo(item.tipo) : 'Sem tipo' }} - {{ item.totalReservas }} reserva(s) no histórico
+                </p>
+              </div>
+            </div>
+            <span class="ranking-meta">{{ item.agendaAtiva }} Ativa(s)</span>
+          </article>
+        </div>
+
+        <ng-template #semEspacosConcorridos>
+          <p class="card-empty mb-0">Nenhum espaço com reservas em andamento ou futuras no momento.</p>
+        </ng-template>
+      </article>
+
+      <article class="card-soft insight-card is-wide">
+        <div class="card-head">
+          <div>
+            <h2 class="section-title">Usuários e perfis</h2>
+          </div>
+        </div>
+
+        <div class="user-summary-list" *ngIf="usuariosResumo.length">
+          <article class="user-summary-item" *ngFor="let item of usuariosResumo; trackBy: trackByLabel">
+            <div>
+              <strong>{{ item.label }}</strong>
+              <p class="mb-0">{{ item.helper }}</p>
+            </div>
+            <span>{{ item.value }}</span>
+          </article>
+        </div>
+      </article>
+    </section>
+  </ng-container>
+</section>

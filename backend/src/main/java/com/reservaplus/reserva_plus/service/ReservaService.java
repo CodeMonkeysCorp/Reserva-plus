@@ -13,7 +13,7 @@ public interface ReservaService {
 
     ReservaResponse cancel(Long reservaId, String userEmail, boolean isAdmin);
 
-    List<ReservaResponse> historico(String userEmail, boolean isAdmin, LocalDate data);
+    List<ReservaResponse> historico(String userEmail, boolean isAdmin, LocalDate dataInicial, LocalDate dataFinal);
 
     AgendaDiaResponse agendaDoDia(Long espacoId, LocalDate data);
 

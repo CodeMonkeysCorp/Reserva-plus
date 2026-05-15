@@ -47,11 +47,18 @@ public class ReservaController {
     @GetMapping("/historico")
     public ResponseEntity<List<ReservaResponse>> historico(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicial,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFinal,
             Authentication authentication
     ) {
+        if (data != null && dataInicial == null && dataFinal == null) {
+            dataInicial = data;
+            dataFinal = data;
+        }
+
         String email = authentication.getName();
         boolean isAdmin = hasRole(authentication, "ROLE_ADMIN");
-        return ResponseEntity.ok(reservaService.historico(email, isAdmin, data));
+        return ResponseEntity.ok(reservaService.historico(email, isAdmin, dataInicial, dataFinal));
     }
 
     @GetMapping("/agenda")

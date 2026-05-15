@@ -1,7 +1,7 @@
 <section class="auth-page">
   <div class="card-soft auth-card">
     <h1 class="auth-title">Criar conta</h1>
-    <p class="auth-subtitle">Cadastre-se para reservar espaços comunitários e acompanhar seus horários.</p>
+    <p class="auth-subtitle">Cadastre-se para reservar espaços, acompanhar seus horários e acessar a plataforma de qualquer contexto de uso.</p>
 
     <div class="alert alert-danger py-2" *ngIf="errorMessage">{{ errorMessage }}</div>
 
@@ -9,10 +9,10 @@
       <div class="mb-3">
         <label class="form-label" for="nome">Nome</label>
         <input id="nome" type="text" class="form-control" formControlName="nome" placeholder="Seu nome completo" />
-        <div class="text-danger mt-1 small" *ngIf="form.controls.nome.touched && form.controls.nome.errors?.['required']">
+        <div class="text-danger mt-1 small" *ngIf="submitAttempted && form.controls.nome.errors?.['required']">
           Informe seu nome.
         </div>
-        <div class="text-danger mt-1 small" *ngIf="form.controls.nome.touched && form.controls.nome.errors?.['minlength']">
+        <div class="text-danger mt-1 small" *ngIf="submitAttempted && form.controls.nome.errors?.['minlength']">
           O nome precisa ter pelo menos 3 caracteres.
         </div>
       </div>
@@ -20,10 +20,10 @@
       <div class="mb-3">
         <label class="form-label" for="email">E-mail</label>
         <input id="email" type="email" class="form-control" formControlName="email" placeholder="voce@email.com" />
-        <div class="text-danger mt-1 small" *ngIf="form.controls.email.touched && form.controls.email.errors?.['required']">
+        <div class="text-danger mt-1 small" *ngIf="submitAttempted && form.controls.email.errors?.['required']">
           Informe seu e-mail.
         </div>
-        <div class="text-danger mt-1 small" *ngIf="form.controls.email.touched && form.controls.email.errors?.['email']">
+        <div class="text-danger mt-1 small" *ngIf="submitAttempted && form.controls.email.errors?.['email']">
           Informe um e-mail válido.
         </div>
       </div>
@@ -52,10 +52,10 @@
             </svg>
           </button>
         </div>
-        <div class="text-danger mt-1 small" *ngIf="form.controls.senha.touched && form.controls.senha.errors?.['required']">
+        <div class="text-danger mt-1 small" *ngIf="submitAttempted && form.controls.senha.errors?.['required']">
           Informe uma senha.
         </div>
-        <div class="text-danger mt-1 small" *ngIf="form.controls.senha.touched && form.controls.senha.errors?.['minlength']">
+        <div class="text-danger mt-1 small" *ngIf="submitAttempted && form.controls.senha.errors?.['minlength']">
           A senha precisa ter pelo menos 6 caracteres.
         </div>
       </div>
@@ -89,7 +89,7 @@
             </svg>
           </button>
         </div>
-        <div class="text-danger mt-1 small" *ngIf="form.controls.confirmarSenha.touched && form.controls.confirmarSenha.errors?.['required']">
+        <div class="text-danger mt-1 small" *ngIf="submitAttempted && form.controls.confirmarSenha.errors?.['required']">
           Confirme sua senha.
         </div>
         <div class="text-danger mt-1 small" *ngIf="senhasNaoConferem">

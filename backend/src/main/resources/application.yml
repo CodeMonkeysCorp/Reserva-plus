@@ -3,6 +3,10 @@ spring:
     url: ${DB_URL:jdbc:mysql://localhost:3306/reserva_plus?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
     username: ${DB_USER:reserva_app}
     password: ${DB_PASSWORD:reserva123}
+  servlet:
+    multipart:
+      max-file-size: ${APP_STORAGE_R2_MAX_FILE_SIZE:10MB}
+      max-request-size: ${APP_STORAGE_R2_MAX_FILE_SIZE:10MB}
   jpa:
     hibernate:
       ddl-auto: update
@@ -24,3 +28,14 @@ app:
     conclusao:
       cron: ${RESERVA_CONCLUSAO_CRON:0 0 * * * *}
       zone: ${RESERVA_CONCLUSAO_ZONE:America/Sao_Paulo}
+  storage:
+    r2:
+      enabled: ${APP_STORAGE_R2_ENABLED:false}
+      account-id: ${APP_STORAGE_R2_ACCOUNT_ID:}
+      endpoint: ${APP_STORAGE_R2_ENDPOINT:}
+      bucket: ${APP_STORAGE_R2_BUCKET:}
+      access-key-id: ${APP_STORAGE_R2_ACCESS_KEY_ID:}
+      secret-access-key: ${APP_STORAGE_R2_SECRET_ACCESS_KEY:}
+      public-base-url: ${APP_STORAGE_R2_PUBLIC_BASE_URL:}
+      object-key-prefix: ${APP_STORAGE_R2_OBJECT_KEY_PREFIX:reserva-plus}
+      max-file-size: ${APP_STORAGE_R2_MAX_FILE_SIZE:10MB}

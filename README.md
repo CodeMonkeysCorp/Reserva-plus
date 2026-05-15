@@ -1,6 +1,6 @@
 ﻿# Reserva+
 
-Sistema web para cadastro, gerenciamento e reserva de espaços compartilhados, como quadras e quiosques.
+Sistema web para cadastro, gerenciamento e reserva de espaços compartilhados, como salas, quadras, estúdios e ambientes multiuso.
 
 ## Informações do Projeto
 
@@ -187,12 +187,54 @@ O backend suporta estas variáveis:
 - `APP_ADMIN_PASSWORD`
 - `RESERVA_CONCLUSAO_CRON`
 - `RESERVA_CONCLUSAO_ZONE`
+- `APP_STORAGE_R2_ENABLED`
+- `APP_STORAGE_R2_ACCOUNT_ID`
+- `APP_STORAGE_R2_ENDPOINT`
+- `APP_STORAGE_R2_BUCKET`
+- `APP_STORAGE_R2_ACCESS_KEY_ID`
+- `APP_STORAGE_R2_SECRET_ACCESS_KEY`
+- `APP_STORAGE_R2_PUBLIC_BASE_URL`
+- `APP_STORAGE_R2_OBJECT_KEY_PREFIX`
+- `APP_STORAGE_R2_MAX_FILE_SIZE`
 
 Sem sobrescrever nada:
 
 - o setup padrão do Docker usa `reserva_app / reserva123`
 - o frontend Docker consome a API por proxy interno em `/api`
 - o profile `local` continua disponivel para rodar o backend manualmente contra o MySQL do Docker
+
+## Cloudflare R2 para Imagens de Espacos
+
+O backend agora possui uma camada inicial de comunicacao com o Cloudflare R2 para upload e remocao de imagens.
+
+Variaveis principais:
+
+- `APP_STORAGE_R2_ENABLED=true` para ativar a integracao
+- `APP_STORAGE_R2_ACCOUNT_ID` ou `APP_STORAGE_R2_ENDPOINT` para o endpoint S3 do R2
+- `APP_STORAGE_R2_BUCKET` para o bucket de imagens
+- `APP_STORAGE_R2_ACCESS_KEY_ID` e `APP_STORAGE_R2_SECRET_ACCESS_KEY` para as credenciais
+- `APP_STORAGE_R2_PUBLIC_BASE_URL` para montar a URL publica da imagem quando o bucket/CDN estiver exposto
+- `APP_STORAGE_R2_OBJECT_KEY_PREFIX` para o prefixo raiz dos objetos
+- `APP_STORAGE_R2_MAX_FILE_SIZE` para limitar o tamanho do upload
+
+Observacoes:
+
+- quando `APP_STORAGE_R2_ENABLED=false`, os endpoints de imagem respondem com `503 Service Unavailable`
+- os uploads aceitam `JPG`, `PNG` e `WEBP`
+- o limite de upload e o multipart do Spring usam `APP_STORAGE_R2_MAX_FILE_SIZE`
+
+Endpoints iniciais:
+
+- `POST /api/espacos/imagens` com `multipart/form-data` no campo `arquivo`
+- `DELETE /api/espacos/imagens?chaveObjeto=<chave>` para remocao administrativa
+
+Exemplo de upload:
+
+```powershell
+curl -X POST http://localhost:8080/api/espacos/imagens `
+  -H "Authorization: Bearer <token-admin>" `
+  -F "arquivo=@C:\caminho\imagem.png"
+```
 
 ## Credenciais Iniciais
 
@@ -205,7 +247,7 @@ No primeiro boot, se ainda não existir admin no banco, a aplicação cria:
 
 - `/login`: entrar
 - `/register`: criar conta
-- `/home`: painel do usuário autenticado
+- `/home`: tela inicial do usuário autenticado
 - `/reservas`: criar e visualizar reservas
 - `/espacos`: administração de espaços
 - `/bloqueios`: administração de bloqueios
@@ -300,15 +342,30 @@ Resposta esperada:
 
 ## Documentação do Projeto
 
+## CI/CD
+
+O projeto agora possui esteira de CI/CD baseada em GitHub Actions e Docker:
+
+- `.github/workflows/ci.yml`: valida backend, frontend e build das imagens em pull requests e pushes
+- `.github/workflows/cd.yml`: testa, publica imagens no GHCR e pode acionar deploy via SSH
+- `compose.prod.yaml`: stack de producao usando imagens publicadas
+- `scripts/deploy-prod.sh` e `scripts/deploy-prod.ps1`: deploy manual por Docker Compose
+- `scripts/init-prod-env.ps1` e `scripts/init-prod-env.sh`: geram `.env.prod` com segredos fortes
+
+Detalhes de variaveis, secrets e exemplo de `.env.prod` estao em:
+
+- `docs/ci-cd.md`
+
 ### 1. Domínio do Problema
 
 Contexto:
 
-Condomínios, clubes e associações frequentemente enfrentam dificuldades na organização de reservas de:
+Empresas, clubes, instituições de ensino, coworkings e outras operações com espaços compartilhados frequentemente enfrentam dificuldades na organização de reservas de:
 
+- salas
 - quadras esportivas
-- quiosques
-- espaços de lazer
+- estúdios
+- áreas multiuso
 
 Problemas comuns:
 
@@ -320,7 +377,7 @@ Problemas comuns:
 
 Solução proposta:
 
-O `Reserva+` é uma aplicação web para gerenciamento e agendamento de espaços comuns.
+O `Reserva+` é uma aplicação web para gerenciamento e agendamento de espaços e recursos compartilhados.
 
 O sistema permite:
 

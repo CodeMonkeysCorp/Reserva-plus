@@ -26,8 +26,14 @@ public class Espaco {
     @Column(length = 500)
     private String descricao;
 
+    @Column(name = "imagem_object_key", length = 255)
+    private String imagemObjectKey;
+
     @Column(nullable = false)
     private boolean ativo = true;
+
+    @Column(nullable = false)
+    private boolean destaque = false;
 
     @Column(name = "horario_funcionamento_inicio")
     private LocalTime horarioFuncionamentoInicio;
@@ -67,12 +73,28 @@ public class Espaco {
         this.descricao = descricao;
     }
 
+    public String getImagemObjectKey() {
+        return imagemObjectKey;
+    }
+
+    public void setImagemObjectKey(String imagemObjectKey) {
+        this.imagemObjectKey = imagemObjectKey;
+    }
+
     public boolean isAtivo() {
         return ativo;
     }
 
     public void setAtivo(boolean ativo) {
         this.ativo = ativo;
+    }
+
+    public boolean isDestaque() {
+        return destaque;
+    }
+
+    public void setDestaque(boolean destaque) {
+        this.destaque = destaque;
     }
 
     public LocalTime getHorarioFuncionamentoInicio() {

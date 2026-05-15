@@ -20,15 +20,15 @@ export class ApiErrorService {
     }
 
     const payload = error.error as Partial<ApiErrorResponse> | null;
-    if (payload?.message) {
-      return payload.message;
-    }
-
     if (payload?.fieldErrors) {
       const [firstError] = Object.values(payload.fieldErrors);
       if (firstError) {
         return firstError;
       }
+    }
+
+    if (payload?.message) {
+      return payload.message;
     }
 
     if (payload?.error) {

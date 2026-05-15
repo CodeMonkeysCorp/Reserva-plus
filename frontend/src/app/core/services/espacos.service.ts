@@ -1,8 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Espaco, EspacoPayload } from '../models';
+import { Espaco, EspacoImagemUploadResponse, EspacoPayload } from '../models';
 
 @Injectable({
   providedIn: 'root'
@@ -24,5 +24,16 @@ export class EspacosService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${environment.apiUrl}/espacos/${id}`);
+  }
+
+  uploadImage(file: File): Observable<EspacoImagemUploadResponse> {
+    const formData = new FormData();
+    formData.append('arquivo', file);
+    return this.http.post<EspacoImagemUploadResponse>(`${environment.apiUrl}/espacos/imagens`, formData);
+  }
+
+  deleteImage(chaveObjeto: string): Observable<void> {
+    const params = new HttpParams().set('chaveObjeto', chaveObjeto);
+    return this.http.delete<void>(`${environment.apiUrl}/espacos/imagens`, { params });
   }
 }
