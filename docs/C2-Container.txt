@@ -1,0 +1,37 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title C2 - Reserva+ - Container Diagram
+
+LAYOUT_WITH_LEGEND()
+
+Person(user, "Usuario comum", "Cria, consulta e cancela as proprias reservas.")
+Person(admin, "Administrador", "Gerencia espacos, bloqueios, usuarios, reservas e indicadores.")
+
+System_Boundary(system, "Reserva+") {
+  Container(spa, "Frontend SPA", "Angular 17, TypeScript", "Interface web com rotas protegidas, formularios de login/cadastro, reserva, historico, painel, espacos, bloqueios e usuarios.")
+  Container(nginx, "Web Server / Reverse Proxy", "Nginx", "Serve os arquivos estaticos da SPA e, em Docker/producao, encaminha /api e /actuator para o backend.")
+  Container(api, "Backend API", "Spring Boot 3.3, Java 17", "API REST stateless que autentica usuarios, emite JWT, aplica regras de negocio, valida reservas e coordena persistencia.")
+  ContainerDb(db, "Banco de Dados", "MySQL 8", "Persiste usuarios, espacos, reservas, historico de reservas e bloqueios de horario.")
+}
+
+System_Ext(r2, "Cloudflare R2", "Armazenamento externo opcional para imagens de espacos.")
+
+Rel(user, spa, "Acessa a aplicacao", "HTTPS")
+Rel(admin, spa, "Acessa a aplicacao administrativa", "HTTPS")
+
+Rel(spa, nginx, "Carrega HTML/CSS/JS e chama API em producao via /api", "HTTPS")
+Rel(spa, api, "Chama API diretamente em desenvolvimento local (ex: /api/auth, /api/espacos, /api/reservas)", "JSON/HTTP :8080")
+Rel(nginx, spa, "Serve arquivos estaticos (HTML/CSS/JS)", "HTTP")
+Rel(nginx, api, "Encaminha requisicoes /api e /actuator", "HTTP :8080")
+Rel(api, db, "Le e grava dados via repositories JPA; usa transacoes e bloqueio pessimista em criacao de reservas", "JDBC")
+Rel(api, r2, "Faz upload, exclusao e montagem de URL publica de imagens quando APP_STORAGE_R2_ENABLED=true", "S3 API/HTTPS")
+
+note bottom of api
+  Autorizacao principal:
+  - /api/auth/login e /api/auth/register: publico
+  - GET /api/espacos e /api/reservas: autenticado
+  - painel, usuarios, bloqueios e mutacoes de espacos: ADMIN
+end note
+
+@enduml

@@ -448,18 +448,15 @@ Diagramas C4 originalmente referenciados no projeto:
 
 - Contexto do sistema
   
-  <img width="589" height="903" alt="imagem (10)" src="https://github.com/user-attachments/assets/879a59b4-5f69-4b63-8113-829fbe252fd9" />
-
+  <img width="474" height="425" alt="image" src="https://github.com/user-attachments/assets/e03b33aa-f01d-4825-9d85-965523b0d9c2" />
 
 - Contêineres
 
-  <img width="759" height="1283" alt="imagem (11)" src="https://github.com/user-attachments/assets/d6d84ade-8ee7-4b6b-803f-caf003a239c3" />
-
+  <img width="313" height="972" alt="image" src="https://github.com/user-attachments/assets/a13bedf6-e01e-4d07-9e88-5994ba4aa81e" />
 
 - Componentes
 
-  <img width="574" height="442" alt="imagem (12)" src="https://github.com/user-attachments/assets/834bac41-19b2-48e6-b0b3-982847ee4483" />
-
+  <img width="2732" height="511" alt="image" src="https://github.com/user-attachments/assets/7031f810-efb8-420d-8658-f8a7bf3f0f4e" />
 
 
 ### 5. Tecnologias Utilizadas

@@ -1,0 +1,25 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title C1 - Reserva+ - System Context
+
+LAYOUT_WITH_LEGEND()
+
+Person(user, "Usuario comum", "Pessoa autenticada que consulta espacos, cria reservas, acompanha historico e cancela as proprias reservas.")
+Person(admin, "Administrador", "Usuario com permissao administrativa para operar espacos, bloqueios, usuarios, reservas e painel gerencial.")
+
+System(reservaPlus, "Reserva+", "Sistema web para cadastro, gerenciamento e reserva de espacos compartilhados.")
+
+System_Ext(r2, "Cloudflare R2", "Armazenamento externo opcional para imagens dos espacos, acessado por API compativel com S3.")
+
+Rel(user, reservaPlus, "Usa para consultar espacos, criar reservas, acompanhar historico e cancelar as proprias reservas", "HTTPS")
+Rel(admin, reservaPlus, "Usa para administrar espacos, bloqueios, usuarios, reservas e indicadores", "HTTPS")
+Rel(reservaPlus, r2, "Armazena, remove e resolve URLs publicas de imagens de espacos quando a integracao esta habilitada", "S3 API/HTTPS")
+
+note right of reservaPlus
+  O sistema aplica autenticacao JWT, regras por perfil,
+  validacao de conflitos, bloqueios de horario e historico
+  de alteracoes das reservas.
+end note
+
+@enduml

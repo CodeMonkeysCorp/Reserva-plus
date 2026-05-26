@@ -1,0 +1,92 @@
+@startuml
+title Reserva+ - Use Case Diagram
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+actor "Visitante" as guest
+actor "Usuario comum" as user
+actor "Administrador" as admin
+actor "Agendador interno" as scheduler
+
+admin --|> user
+
+rectangle "Reserva+" {
+  usecase "Cadastrar conta" as UC_Register
+  usecase "Fazer login" as UC_Login
+  usecase "Validar sessao" as UC_Validate
+  usecase "Encerrar sessao" as UC_Logout
+
+  usecase "Consultar espacos" as UC_ListSpaces
+  usecase "Consultar agenda do espaco" as UC_DayAgenda
+  usecase "Criar reserva" as UC_CreateReservation
+  
+  usecase "Consultar minhas reservas" as UC_MyHistory
+  usecase "Cancelar propria reserva" as UC_CancelOwn
+
+  usecase "Consultar painel administrativo" as UC_Dashboard
+  usecase "Gerenciar Reservas" as UC_AdminReservations
+  usecase "Cancelar qualquer reserva" as UC_CancelAny
+  usecase "Gerenciar espacos" as UC_ManageSpaces
+  usecase "Cadastrar espaco" as UC_CreateSpace
+  usecase "Editar espaco" as UC_EditSpace
+  usecase "Excluir espaco" as UC_DeleteSpace
+  usecase "Enviar imagem de espaco" as UC_UploadImage
+  usecase "Remover imagem de espaco" as UC_DeleteImage
+  usecase "Gerenciar bloqueios de horario" as UC_ManageBlocks
+  usecase "Criar bloqueio simples" as UC_CreateBlock
+  usecase "Criar bloqueio recorrente semanal" as UC_CreateRecurringBlock
+  usecase "Remover bloqueio ou serie" as UC_DeleteBlock
+  usecase "Gerenciar usuarios" as UC_ManageUsers
+  usecase "Alterar papel ou senha de usuario" as UC_UpdateUser
+  usecase "Concluir reservas encerradas" as UC_AutoComplete
+}
+
+guest --> UC_Register
+guest --> UC_Login
+
+user --> UC_Validate
+user --> UC_Logout
+user --> UC_ListSpaces
+user --> UC_DayAgenda
+user --> UC_CreateReservation
+user --> UC_MyHistory
+user --> UC_CancelOwn
+
+admin --> UC_Dashboard
+admin --> UC_AdminReservations
+admin --> UC_CancelAny
+admin --> UC_ManageSpaces
+admin --> UC_ManageBlocks
+admin --> UC_ManageUsers
+
+scheduler --> UC_AutoComplete
+
+note left of UC_CreateReservation
+  Internally, creating a reserva includes:
+  - validar horario de funcionamento
+  - verificar bloqueios
+  - verificar conflitos de reserva
+  - registrar historico da operacao
+end note
+
+note right of scheduler
+  O agendador interno executa `Concluir reservas encerradas` na inicializacao e periodicamente via cron.
+end note
+
+UC_ManageSpaces <.. UC_CreateSpace : <<extend>>
+UC_ManageSpaces <.. UC_EditSpace : <<extend>>
+UC_ManageSpaces <.. UC_DeleteSpace : <<extend>>
+UC_ManageSpaces <.. UC_UploadImage : <<extend>>
+UC_ManageSpaces <.. UC_DeleteImage : <<extend>>
+
+UC_ManageBlocks <.. UC_CreateBlock : <<extend>>
+UC_ManageBlocks <.. UC_CreateRecurringBlock : <<extend>>
+UC_ManageBlocks <.. UC_DeleteBlock : <<extend>>
+
+UC_ManageUsers <.. UC_UpdateUser : <<extend>>
+
+UC_AdminReservations ..> UC_CancelAny : <<include>>
+
+@enduml

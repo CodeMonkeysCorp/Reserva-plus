@@ -1,0 +1,88 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title C3 - Reserva+ - Backend API Components
+
+LAYOUT_WITH_LEGEND()
+
+Person(user, "Usuario comum", "Usuario autenticado com papel USER.")
+Person(admin, "Administrador", "Usuario autenticado com papel ADMIN.")
+
+Container_Boundary(api, "Backend API - Spring Boot") {
+  Component(authController, "AuthController", "REST Controller", "Endpoints /api/auth para cadastro, login e consulta da sessao atual.")
+  Component(reservaController, "ReservaController", "REST Controller", "Endpoints /api/reservas para criar, cancelar, consultar historico e agenda do dia.")
+  Component(espacoController, "EspacoController", "REST Controller", "Endpoints /api/espacos para listar, consultar e administrar espacos.")
+  Component(espacoImagemController, "EspacoImagemController", "REST Controller", "Endpoints /api/espacos/imagens para upload e remocao de imagens.")
+  Component(bloqueioController, "BloqueioController", "REST Controller", "Endpoints /api/bloqueios para criar, consultar e remover bloqueios simples ou recorrentes.")
+  Component(painelController, "PainelController", "REST Controller", "Endpoint /api/painel/resumo para metricas administrativas.")
+  Component(usuarioController, "UsuarioController", "REST Controller", "Endpoints /api/usuarios para listagem e alteracao administrativa de usuarios.")
+
+  Component(security, "SecurityConfig + JWT Filter", "Spring Security", "Configura CORS, sessao stateless, regras por rota, validacao do bearer token e autorizacao por papel.")
+  Component(authService, "AuthService", "Service", "Normaliza e-mails, registra usuarios, autentica credenciais, criptografa senhas e emite JWT.")
+  Component(reservaService, "ReservaService", "Service", "Executa a transacao principal de reserva, cancelamento, historico, agenda e conclusao automatica.")
+  Component(espacoService, "EspacoService", "Service", "Gerencia espacos, horarios de funcionamento, status ativo/destaque e chaves de imagem.")
+  Component(bloqueioService, "BloqueioService", "Service", "Gerencia bloqueios de horario, recorrencia semanal e conflitos com reservas ou bloqueios existentes.")
+  Component(painelService, "PainelService", "Service", "Monta metricas de espacos, reservas, usuarios, agenda e rankings para administracao.")
+  Component(usuarioService, "UsuarioService", "Service", "Lista usuarios e atualiza papel/senha com regras administrativas.")
+  Component(storageService, "StorageService", "Port/Adapter", "Abstracao para upload, exclusao e URL publica; implementada por Cloudflare R2 ou servico desabilitado.")
+  Component(scheduler, "ReservaStatusScheduler", "Scheduled Component", "Ao iniciar e por cron, conclui automaticamente reservas ativas ja encerradas.")
+
+  Component(jwtService, "JwtService + JwtAuthenticationFilter", "Security", "Emissao e validacao de JWT; filtro que extrai e valida bearer tokens.")
+
+  Component(cloudR2Storage, "CloudflareR2StorageService", "Storage Adapter", "Implementacao S3/Cloudflare R2 para upload, delete e resolucao de URL publica.")
+  Component(disabledStorage, "DisabledStorageService", "Storage Adapter", "Implementacao nula usada quando APP_STORAGE_R2_ENABLED=false.")
+
+  Component(painelProjections, "Painel Projections", "Spring Data Projections", "Projecoes e queries otimizadas usadas por PainelService para agregacoes e rankings.")
+
+  ComponentDb(repositories, "Repositories JPA", "Spring Data JPA", "Acesso a Usuario, Espaco, Reserva, ReservaHistorico e BloqueioHorario, incluindo consultas de conflito e metricas.")
+  Component(models, "Entidades e DTOs", "JPA + Java DTOs", "Modelo de dominio, requisicoes, respostas e projecoes usadas pela API.")
+}
+
+ContainerDb(db, "Banco de Dados", "MySQL 8", "Tabelas: usuarios, espacos, reservas, reserva_historicos e bloqueios_horario.")
+System_Ext(r2, "Cloudflare R2", "Bucket opcional de imagens de espacos.")
+
+Rel(user, security, "Envia JWT em chamadas autenticadas", "Bearer token")
+Rel(admin, security, "Envia JWT com papel ADMIN", "Bearer token")
+
+Rel(security, authController, "Permite login/register publicos e protege demais rotas")
+Rel(security, reservaController, "Permite usuarios autenticados")
+Rel(security, espacoController, "GET autenticado; POST/PUT/DELETE apenas ADMIN")
+Rel(security, espacoImagemController, "Upload/remocao apenas ADMIN")
+Rel(security, bloqueioController, "Apenas ADMIN")
+Rel(security, painelController, "Apenas ADMIN")
+Rel(security, usuarioController, "Apenas ADMIN")
+
+Rel(authController, authService, "Registra, autentica e consulta sessao")
+Rel(reservaController, reservaService, "Cria, cancela e consulta reservas")
+Rel(espacoController, espacoService, "Gerencia cadastro de espacos")
+Rel(espacoImagemController, storageService, "Envia e remove arquivos")
+Rel(bloqueioController, bloqueioService, "Gerencia bloqueios")
+Rel(painelController, painelService, "Solicita resumo administrativo")
+Rel(usuarioController, usuarioService, "Gerencia usuarios")
+Rel(scheduler, reservaService, "Executa conclusao automatica")
+
+Rel(authService, repositories, "Consulta e persiste usuarios")
+Rel(reservaService, repositories, "Consulta usuarios, espacos, reservas, bloqueios e historicos; bloqueia espaco para evitar corrida")
+Rel(espacoService, repositories, "Persiste espacos")
+Rel(espacoService, storageService, "Resolve URL publica e remove imagem substituida")
+Rel(bloqueioService, repositories, "Consulta espacos, bloqueios e reservas para validar conflitos")
+Rel(painelService, repositories, "Executa agregacoes e rankings")
+Rel(painelService, painelProjections, "Usa projecoes para agregacoes e consultas otimizadas")
+Rel(usuarioService, repositories, "Consulta e atualiza usuarios")
+Rel(repositories, models, "Mapeia entidades e DTOs")
+Rel(repositories, db, "Le e grava", "JPA/JDBC")
+Rel(storageService, r2, "Upload/delete/URL publica quando habilitado", "S3 API/HTTPS")
+Rel(storageService, cloudR2Storage, "Implementada por (quando habilitado)")
+Rel(storageService, disabledStorage, "Fallback quando armazenamento desabilitado")
+Rel(security, jwtService, "Valida tokens e integra com filtros de requisicao")
+
+note right of reservaService
+  Criacao de reserva:
+  1. valida data, hora cheia e antecedencia maxima de 7 dias
+  2. carrega usuario
+  3. bloqueia o espaco com PESSIMISTIC_WRITE
+  4. valida espaco ativo, funcionamento, bloqueios e reservas ativas
+  5. salva reserva ATIVA e registra historico
+end note
+
+@enduml
