@@ -447,16 +447,17 @@ Frontend:
 Diagramas C4 originalmente referenciados no projeto:
 
 - Contexto do sistema
-  
-  <img width="474" height="425" alt="image" src="https://github.com/user-attachments/assets/e03b33aa-f01d-4825-9d85-965523b0d9c2" />
+
+  <img width="588" height="902" alt="C1-System-Context" src="https://github.com/user-attachments/assets/46282d5b-9573-484c-b474-40cdc8ec5e4e" />
 
 - Contêineres
 
-  <img width="313" height="972" alt="image" src="https://github.com/user-attachments/assets/a13bedf6-e01e-4d07-9e88-5994ba4aa81e" />
+  <img width="911" height="1541" alt="C2-Container" src="https://github.com/user-attachments/assets/cc884bff-b892-4905-81d6-8b9bf3dc218b" />
+
 
 - Componentes
 
-  <img width="2732" height="511" alt="image" src="https://github.com/user-attachments/assets/7031f810-efb8-420d-8658-f8a7bf3f0f4e" />
+  <img width="2462" height="1894" alt="C3-Backend-Components" src="https://github.com/user-attachments/assets/f8bbd3c1-dc04-4c41-ad5d-4c6205fa6c7c" />
 
 
 ### 5. Tecnologias Utilizadas
