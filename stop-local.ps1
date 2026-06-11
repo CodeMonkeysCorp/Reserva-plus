@@ -2,6 +2,7 @@ param(
     [switch]$BackendOnly,
     [switch]$FrontendOnly,
     [switch]$DatabaseOnly,
+    [switch]$IncludeDatabase,
     [switch]$RemoveVolumes
 )
 
@@ -17,7 +18,7 @@ function Require-Path {
     )
 
     if (-not (Test-Path $Path)) {
-        throw "$FriendlyName nao foi encontrado em '$Path'."
+        throw "$FriendlyName não foi encontrado em '$Path'."
     }
 }
 
@@ -28,11 +29,15 @@ function Require-Command {
     )
 
     if (-not (Get-Command $CommandName -ErrorAction SilentlyContinue)) {
-        throw "$FriendlyName nao foi encontrado no PATH."
+        throw "$FriendlyName não foi encontrado no PATH."
     }
 }
 
 function Resolve-ServiceSelection {
+    if (($BackendOnly -or $FrontendOnly -or $DatabaseOnly) -and $IncludeDatabase) {
+        throw "Use -IncludeDatabase sem combinar com -BackendOnly, -FrontendOnly ou -DatabaseOnly."
+    }
+
     $selectedServices = @()
 
     if ($BackendOnly) {
@@ -48,7 +53,15 @@ function Resolve-ServiceSelection {
     }
 
     if ($selectedServices.Count -gt 1) {
-        throw "Use apenas um dos parametros: -BackendOnly, -FrontendOnly ou -DatabaseOnly."
+        throw "Use apenas um dos parâmetros: -BackendOnly, -FrontendOnly ou -DatabaseOnly."
+    }
+
+    if ($IncludeDatabase) {
+        return @("mysql", "backend", "frontend")
+    }
+
+    if ($selectedServices.Count -eq 0) {
+        return @("backend", "frontend")
     }
 
     return @($selectedServices)
@@ -69,29 +82,42 @@ Require-Path -Path $composeFile -FriendlyName "Arquivo compose"
 Require-Command -CommandName "docker" -FriendlyName "Docker"
 
 $services = Resolve-ServiceSelection
+$stoppingWholeStack = $IncludeDatabase
 
-if ($RemoveVolumes -and $services.Count -gt 0) {
-    throw "Use -RemoveVolumes apenas ao derrubar a stack completa."
+if ($RemoveVolumes -and -not $stoppingWholeStack) {
+    throw "Use -RemoveVolumes apenas com -IncludeDatabase."
 }
 
-if ($services.Count -eq 0) {
+if ($stoppingWholeStack) {
     $composeArgs = @("down")
     if ($RemoveVolumes) {
         $composeArgs += "-v"
     }
 
-    Write-Host "Encerrando stack Docker..." -ForegroundColor Yellow
+    Write-Host "Encerrando stack Docker completa..." -ForegroundColor Yellow
     Invoke-DockerCompose -ComposeArgs $composeArgs
     Write-Host "Stack encerrada." -ForegroundColor Green
     Write-Host "Para subir novamente: $repoRoot\\run-local.ps1" -ForegroundColor DarkGray
     return
 }
 
-Write-Host "Parando servicos Docker selecionados..." -ForegroundColor Yellow
+if ($DatabaseOnly) {
+    Write-Host "Parando o MySQL Docker selecionado..." -ForegroundColor Yellow
+}
+elseif ($BackendOnly -or $FrontendOnly) {
+    Write-Host "Parando serviços Docker selecionados..." -ForegroundColor Yellow
+}
+else {
+    Write-Host "Parando frontend/backend e preservando o MySQL compartilhado..." -ForegroundColor Yellow
+}
+
 Invoke-DockerCompose -ComposeArgs (@("stop") + $services)
 
 Write-Host ""
 Write-Host "Status da stack:" -ForegroundColor Cyan
 Invoke-DockerCompose -ComposeArgs @("ps")
 Write-Host ""
+if (-not ($BackendOnly -or $FrontendOnly -or $DatabaseOnly)) {
+    Write-Host "Para derrubar também o MySQL: $repoRoot\\stop-local.ps1 -IncludeDatabase" -ForegroundColor DarkGray
+}
 Write-Host "Para subir novamente: $repoRoot\\run-local.ps1" -ForegroundColor DarkGray

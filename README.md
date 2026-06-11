@@ -48,8 +48,8 @@ Administradores também podem cadastrar espaços e controlar bloqueios de horár
 
 - `frontend/`: interface web
 - `backend/`: API e regras de negócio
-- `run-local.ps1`: sobe a stack local via Docker
-- `stop-local.ps1`: para a stack local via Docker
+- `run-local.ps1`: sobe a aplicação local via Docker, preservando o MySQL por padrão
+- `stop-local.ps1`: para a aplicação local via Docker sem derrubar o MySQL compartilhado por padrão
 - `compose.yaml`: sobe frontend, backend e MySQL via Docker
 
 ## Requisitos
@@ -73,7 +73,7 @@ Administradores também podem cadastrar espaços e controlar bloqueios de horár
 
 ## Rodando com Docker
 
-Esse eh o caminho padrao do projeto agora.
+Esse é o caminho padrão do projeto agora.
 
 ### 1. Crie o arquivo `.env`
 
@@ -93,16 +93,16 @@ Esse comando sobe:
 
 - frontend Angular servido por Nginx
 - backend Spring Boot
-- MySQL 8.4
+- MySQL 8.4, quando necessário pelas dependências do Compose
 
-Voce tambem pode usar o Compose diretamente:
+Você também pode usar o Compose diretamente:
 
 ```powershell
 docker compose up --build -d
 ```
 
-Se a stack ja estiver rodando, o `run-local.ps1` derruba e sobe novamente os servicos alvo automaticamente.
-Quando houver mudanca de codigo no backend ou frontend, prefira usar `-Build` para reconstruir as imagens locais antes de subir.
+Se a stack já estiver rodando, o `run-local.ps1` recria backend/frontend por padrão e preserva o MySQL compartilhado.
+Quando houver mudança de código no backend ou frontend, prefira usar `-Build` para reconstruir as imagens locais antes de subir.
 
 ### 3. Acesse
 
@@ -110,12 +110,18 @@ Quando houver mudanca de codigo no backend ou frontend, prefira usar `-Build` pa
 - backend: `http://localhost:8080`
 - healthcheck: `http://localhost:8080/actuator/health`
 
-### 4. Comandos uteis
+### 4. Comandos úteis
 
-Parar toda a stack:
+Parar frontend/backend e manter o MySQL compartilhado:
 
 ```powershell
 .\stop-local.ps1
+```
+
+Derrubar toda a stack, incluindo MySQL:
+
+```powershell
+.\stop-local.ps1 -IncludeDatabase
 ```
 
 Subir apenas o banco:
@@ -159,6 +165,9 @@ Esse profile usa:
 - senha: `reserva123`
 
 Esse fluxo usa o MySQL publicado pelo Docker na porta `3306`.
+Ele também pode ser compartilhado com o `Eventus+`, desde que a database de cada projeto permaneça separada.
+
+Se o `Eventus+` estiver usando esse mesmo MySQL, evite `.\stop-local.ps1 -IncludeDatabase` ou `-RemoveVolumes` sem necessidade.
 
 ## Frontend Manual
 
@@ -207,7 +216,7 @@ Sem sobrescrever nada:
 
 O backend agora possui uma camada inicial de comunicacao com o Cloudflare R2 para upload e remocao de imagens.
 
-Variaveis principais:
+Variáveis principais:
 
 - `APP_STORAGE_R2_ENABLED=true` para ativar a integracao
 - `APP_STORAGE_R2_ACCOUNT_ID` ou `APP_STORAGE_R2_ENDPOINT` para o endpoint S3 do R2
@@ -296,7 +305,7 @@ Se o frontend já estiver aberto, o Angular pode sugerir outra porta.
 
 ### Porta 3306 em uso
 
-Se o MySQL do Docker nao subir, provavelmente ja existe outro banco ocupando a porta `3306`.
+Se o MySQL do Docker não subir, provavelmente já existe outro banco ocupando a porta `3306`.
 
 Para verificar:
 
@@ -304,13 +313,13 @@ Para verificar:
 Get-NetTCPConnection -LocalPort 3306 -State Listen
 ```
 
-Para encerrar a stack atual:
+Para encerrar também o MySQL desta stack:
 
 ```powershell
-.\stop-local.ps1
+.\stop-local.ps1 -IncludeDatabase
 ```
 
-Se o processo nao for desta stack, libere a porta manualmente ou altere `MYSQL_PORT` no `.env`.
+Se o processo não for desta stack, libere a porta manualmente ou altere `MYSQL_PORT` no `.env`.
 
 ### Status dos containers
 
@@ -338,7 +347,7 @@ Resposta esperada:
 
 - o backend usa `ddl-auto: update`, então as tabelas são criadas e ajustadas automaticamente
 - o projeto foi preparado para desenvolvimento local em Windows com PowerShell
-- o Docker eh o ambiente padrao de desenvolvimento local
+- o Docker é o ambiente padrão de desenvolvimento local
 
 ## Documentação do Projeto
 
@@ -348,7 +357,7 @@ O projeto agora possui esteira de CI/CD baseada em GitHub Actions e Docker:
 
 - `.github/workflows/ci.yml`: valida backend, frontend e build das imagens em pull requests e pushes
 - `.github/workflows/cd.yml`: testa, publica imagens no GHCR e pode acionar deploy via SSH
-- `compose.prod.yaml`: stack de producao usando imagens publicadas
+- `compose.prod.yaml`: stack de produção usando imagens publicadas
 - `scripts/deploy-prod.sh` e `scripts/deploy-prod.ps1`: deploy manual por Docker Compose
 - `scripts/init-prod-env.ps1` e `scripts/init-prod-env.sh`: geram `.env.prod` com segredos fortes
 
