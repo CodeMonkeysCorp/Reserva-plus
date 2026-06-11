@@ -123,7 +123,7 @@
           (change)="onImageSelected($event)"
         />
 
-        <div class="file-picker">
+        <div class="file-picker" *ngIf="!hasSelectedImage">
           <button type="button" class="file-picker-button" [disabled]="saving || imageUploading" (click)="openImagePicker()">
             Escolher imagem
           </button>

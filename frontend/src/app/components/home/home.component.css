@@ -127,10 +127,11 @@
 }
 
 .space-card-body {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.55rem;
   padding: 1rem 1.05rem 1.1rem;
-  align-content: start;
+  height: 100%;
 }
 
 .space-card-type {
@@ -157,6 +158,8 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 0.8rem;
+  margin-top: auto;
+  padding-top: 0.35rem;
   color: #587266;
   font-size: 0.88rem;
 }
