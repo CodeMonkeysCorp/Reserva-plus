@@ -48,8 +48,8 @@ Administradores também podem cadastrar espaços e controlar bloqueios de horár
 
 - `frontend/`: interface web
 - `backend/`: API e regras de negócio
-- `run-local.ps1`: sobe a aplicação local via Docker, preservando o MySQL por padrão
-- `stop-local.ps1`: para a aplicação local via Docker sem derrubar o MySQL compartilhado por padrão
+- `run-local.ps1`: sobe a stack local via Docker
+- `stop-local.ps1`: para a stack local via Docker
 - `compose.yaml`: sobe frontend, backend e MySQL via Docker
 
 ## Requisitos
@@ -93,7 +93,7 @@ Esse comando sobe:
 
 - frontend Angular servido por Nginx
 - backend Spring Boot
-- MySQL 8.4, quando necessário pelas dependências do Compose
+- MySQL 8.4
 
 Você também pode usar o Compose diretamente:
 
@@ -101,7 +101,7 @@ Você também pode usar o Compose diretamente:
 docker compose up --build -d
 ```
 
-Se a stack já estiver rodando, o `run-local.ps1` recria backend/frontend por padrão e preserva o MySQL compartilhado.
+Se a stack já estiver rodando, o `run-local.ps1` derruba e sobe novamente os serviços alvo automaticamente.
 Quando houver mudança de código no backend ou frontend, prefira usar `-Build` para reconstruir as imagens locais antes de subir.
 
 ### 3. Acesse
@@ -112,16 +112,10 @@ Quando houver mudança de código no backend ou frontend, prefira usar `-Build` 
 
 ### 4. Comandos úteis
 
-Parar frontend/backend e manter o MySQL compartilhado:
+Parar toda a stack:
 
 ```powershell
 .\stop-local.ps1
-```
-
-Derrubar toda a stack, incluindo MySQL:
-
-```powershell
-.\stop-local.ps1 -IncludeDatabase
 ```
 
 Subir apenas o banco:
@@ -165,9 +159,6 @@ Esse profile usa:
 - senha: `reserva123`
 
 Esse fluxo usa o MySQL publicado pelo Docker na porta `3306`.
-Ele também pode ser compartilhado com o `Eventus+`, desde que a database de cada projeto permaneça separada.
-
-Se o `Eventus+` estiver usando esse mesmo MySQL, evite `.\stop-local.ps1 -IncludeDatabase` ou `-RemoveVolumes` sem necessidade.
 
 ## Frontend Manual
 
@@ -313,10 +304,10 @@ Para verificar:
 Get-NetTCPConnection -LocalPort 3306 -State Listen
 ```
 
-Para encerrar também o MySQL desta stack:
+Para encerrar a stack atual:
 
 ```powershell
-.\stop-local.ps1 -IncludeDatabase
+.\stop-local.ps1
 ```
 
 Se o processo não for desta stack, libere a porta manualmente ou altere `MYSQL_PORT` no `.env`.

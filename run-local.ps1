@@ -1,4 +1,4 @@
-param(
+﻿param(
     [switch]$BackendOnly,
     [switch]$FrontendOnly,
     [switch]$DatabaseOnly,
@@ -19,7 +19,7 @@ function Require-Path {
     )
 
     if (-not (Test-Path $Path)) {
-        throw "$FriendlyName não foi encontrado em '$Path'."
+        throw "$FriendlyName nao foi encontrado em '$Path'."
     }
 }
 
@@ -30,7 +30,7 @@ function Require-Command {
     )
 
     if (-not (Get-Command $CommandName -ErrorAction SilentlyContinue)) {
-        throw "$FriendlyName não foi encontrado no PATH."
+        throw "$FriendlyName nao foi encontrado no PATH."
     }
 }
 
@@ -50,11 +50,11 @@ function Resolve-ServiceSelection {
     }
 
     if ($selectedServices.Count -gt 1) {
-        throw "Use apenas um dos parâmetros: -BackendOnly, -FrontendOnly ou -DatabaseOnly."
+        throw "Use apenas um dos parametros: -BackendOnly, -FrontendOnly ou -DatabaseOnly."
     }
 
     if ($selectedServices.Count -eq 0) {
-        return @("backend", "frontend")
+        return @("mysql", "backend", "frontend")
     }
 
     return @($selectedServices)
@@ -119,6 +119,29 @@ function Invoke-DockerCompose {
     }
 }
 
+function Get-RunningComposeServices {
+    $dockerArgs = @("compose", "ps", "--services", "--filter", "status=running")
+    $output = & docker @dockerArgs
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Falha ao consultar servicos em execucao com 'docker $($dockerArgs -join ' ')'."
+    }
+
+    return @($output | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_.Trim() })
+}
+
+function Show-RunningServices {
+    $runningServices = Get-RunningComposeServices
+
+    Write-Host "Servicos em execucao:" -ForegroundColor Cyan
+    if ($runningServices.Count -eq 0) {
+        Write-Host "Nenhum servico Docker em execucao."
+        return
+    }
+
+    Write-Host ($runningServices -join ", ")
+}
+
 function Get-ComposeContainerIds {
     param([string[]]$Services)
 
@@ -126,21 +149,30 @@ function Get-ComposeContainerIds {
     $output = & docker @dockerArgs
 
     if ($LASTEXITCODE -ne 0) {
-        throw "Falha ao consultar contêineres com 'docker $($dockerArgs -join ' ')'."
+        throw "Falha ao consultar containers com 'docker $($dockerArgs -join ' ')'."
     }
 
     return @($output | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_.Trim() })
 }
 
 function Restart-ExistingServices {
-    param([string[]]$Services)
+    param(
+        [string[]]$Services,
+        [bool]$RestartWholeStack
+    )
 
     $containerIds = Get-ComposeContainerIds -Services $Services
     if ($containerIds.Count -eq 0) {
         return
     }
 
-    Write-Host "Serviços Docker já existentes encontrados. Reiniciando os alvos..." -ForegroundColor Yellow
+    if ($RestartWholeStack) {
+        Write-Host "Stack Docker ja encontrada. Reiniciando antes de subir novamente..." -ForegroundColor Yellow
+        Invoke-DockerCompose -ComposeArgs @("down")
+        return
+    }
+
+    Write-Host "Servicos Docker ja existentes encontrados. Reiniciando os alvos..." -ForegroundColor Yellow
     Invoke-DockerCompose -ComposeArgs (@("stop") + $Services)
     Invoke-DockerCompose -ComposeArgs (@("rm", "-f") + $Services)
 }
@@ -150,14 +182,16 @@ Require-Command -CommandName "docker" -FriendlyName "Docker"
 
 $services = Resolve-ServiceSelection
 $settings = Get-EnvironmentSettings
+$restartWholeStack = -not ($BackendOnly -or $FrontendOnly -or $DatabaseOnly)
 
 $frontendPort = Get-ConfiguredValue -Settings $settings -Key "FRONTEND_PORT" -DefaultValue "4200"
 $backendPort = Get-ConfiguredValue -Settings $settings -Key "BACKEND_PORT" -DefaultValue "8080"
 $mysqlPort = Get-ConfiguredValue -Settings $settings -Key "MYSQL_PORT" -DefaultValue "3306"
 $mysqlDatabase = Get-ConfiguredValue -Settings $settings -Key "MYSQL_DATABASE" -DefaultValue "reserva_plus"
 $mysqlUser = Get-ConfiguredValue -Settings $settings -Key "MYSQL_USER" -DefaultValue "reserva_app"
+$healthUrl = "http://localhost:$backendPort/actuator/health"
 
-Restart-ExistingServices -Services $services
+Restart-ExistingServices -Services $services -RestartWholeStack $restartWholeStack
 
 $composeArgs = @("up", "-d")
 if ($Build) {
@@ -166,32 +200,33 @@ if ($Build) {
 
 $composeArgs += $services
 
-Write-Host "Subindo serviços Docker..." -ForegroundColor Green
+Write-Host "Subindo servicos Docker..." -ForegroundColor Green
 Invoke-DockerCompose -ComposeArgs $composeArgs
 
 Write-Host ""
-Write-Host "Status da stack:" -ForegroundColor Cyan
-Invoke-DockerCompose -ComposeArgs @("ps")
+Show-RunningServices
 
 Write-Host ""
 
 if ($DatabaseOnly) {
-    Write-Host "Banco Docker em execução:" -ForegroundColor Cyan
+    Write-Host "Banco Docker em execucao:" -ForegroundColor Cyan
     Write-Host "Host:     127.0.0.1"
     Write-Host "Porta:    $mysqlPort"
     Write-Host "Banco:    $mysqlDatabase"
-    Write-Host "Usuário:  $mysqlUser"
+    Write-Host "Usuario:  $mysqlUser"
     Write-Host ""
-    Write-Host "Próximo passo: rode o backend manualmente ou use .\run-local.ps1 para subir a aplicação." -ForegroundColor DarkGray
+    Write-Host "Proximo passo: rode o backend manualmente ou use .\run-local.ps1 para subir a stack completa." -ForegroundColor DarkGray
     Write-Host "Parar banco: .\stop-local.ps1 -DatabaseOnly" -ForegroundColor DarkGray
     return
 }
 
 if ($BackendOnly) {
-    Write-Host "Backend Docker em execução:" -ForegroundColor Cyan
+    Write-Host "Backend Docker em execucao:" -ForegroundColor Cyan
     Write-Host "Backend:  http://localhost:$backendPort"
     Write-Host "API:      http://localhost:$backendPort/api"
-    Write-Host "Health:   http://localhost:$backendPort/actuator/health"
+    if ($healthUrl) {
+        Write-Host "Health:   $healthUrl"
+    }
     Write-Host "Banco:    127.0.0.1:$mysqlPort ($mysqlDatabase)"
     Write-Host ""
     Write-Host "Parar backend: .\stop-local.ps1 -BackendOnly" -ForegroundColor DarkGray
@@ -202,18 +237,19 @@ Write-Host "URLs do projeto:" -ForegroundColor Cyan
 Write-Host "Frontend: http://localhost:$frontendPort"
 Write-Host "Backend:  http://localhost:$backendPort"
 Write-Host "API:      http://localhost:$backendPort/api"
-Write-Host "Health:   http://localhost:$backendPort/actuator/health"
+if ($healthUrl) {
+    Write-Host "Health:   $healthUrl"
+}
 Write-Host ""
-Write-Host "Banco Docker compartilhado:" -ForegroundColor Cyan
+Write-Host "Banco Docker:" -ForegroundColor Cyan
 Write-Host "Host:     127.0.0.1"
 Write-Host "Porta:    $mysqlPort"
 Write-Host "Banco:    $mysqlDatabase"
-Write-Host "Usuário:  $mysqlUser"
+Write-Host "Usuario:  $mysqlUser"
 Write-Host ""
-Write-Host "O MySQL é preservado por padrão para convivência com outros projetos locais." -ForegroundColor DarkGray
-Write-Host "Se você alterou código do backend/frontend, rode com rebuild: .\run-local.ps1 -Build" -ForegroundColor DarkGray
+Write-Host "Se voce alterou codigo do backend/frontend, rode com rebuild: .\run-local.ps1 -Build" -ForegroundColor DarkGray
 if ($FrontendOnly) {
-    Write-Host "Observação: ao subir apenas o frontend, o Docker Compose também sobe backend e banco como dependências." -ForegroundColor DarkGray
+    Write-Host "Observacao: ao subir apenas o frontend, o Docker Compose tambem sobe backend e banco como dependencias." -ForegroundColor DarkGray
 }
-Write-Host "Parar app: .\stop-local.ps1" -ForegroundColor DarkGray
-Write-Host "Parar tudo, incluindo MySQL: .\stop-local.ps1 -IncludeDatabase" -ForegroundColor DarkGray
+Write-Host "Parar tudo: .\stop-local.ps1" -ForegroundColor DarkGray
+
