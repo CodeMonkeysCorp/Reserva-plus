@@ -184,9 +184,9 @@ $services = Resolve-ServiceSelection
 $settings = Get-EnvironmentSettings
 $restartWholeStack = -not ($BackendOnly -or $FrontendOnly -or $DatabaseOnly)
 
-$frontendPort = Get-ConfiguredValue -Settings $settings -Key "FRONTEND_PORT" -DefaultValue "4200"
-$backendPort = Get-ConfiguredValue -Settings $settings -Key "BACKEND_PORT" -DefaultValue "8080"
-$mysqlPort = Get-ConfiguredValue -Settings $settings -Key "MYSQL_PORT" -DefaultValue "3306"
+$frontendPort = Get-ConfiguredValue -Settings $settings -Key "FRONTEND_PORT" -DefaultValue "4300"
+$backendPort = Get-ConfiguredValue -Settings $settings -Key "BACKEND_PORT" -DefaultValue "8180"
+$mysqlPort = Get-ConfiguredValue -Settings $settings -Key "MYSQL_PORT" -DefaultValue "3310"
 $mysqlDatabase = Get-ConfiguredValue -Settings $settings -Key "MYSQL_DATABASE" -DefaultValue "reserva_plus"
 $mysqlUser = Get-ConfiguredValue -Settings $settings -Key "MYSQL_USER" -DefaultValue "reserva_app"
 $healthUrl = "http://localhost:$backendPort/actuator/health"

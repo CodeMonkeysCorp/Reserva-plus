@@ -4,7 +4,7 @@ services:
     container_name: reserva-plus-mysql
     restart: unless-stopped
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "${MYSQL_PORT:-3310}:3306"
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-reserva_plus}
       MYSQL_USER: ${MYSQL_USER:-reserva_app}
@@ -51,7 +51,7 @@ services:
       APP_STORAGE_R2_OBJECT_KEY_PREFIX: ${APP_STORAGE_R2_OBJECT_KEY_PREFIX:-reserva-plus}
       APP_STORAGE_R2_MAX_FILE_SIZE: ${APP_STORAGE_R2_MAX_FILE_SIZE:-10MB}
     ports:
-      - "${BACKEND_PORT:-8080}:8080"
+      - "${BACKEND_PORT:-8180}:8080"
 
   frontend:
     build:
@@ -62,7 +62,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "${FRONTEND_PORT:-4200}:80"
+      - "${FRONTEND_PORT:-4300}:80"
 
 volumes:
   mysql_data:

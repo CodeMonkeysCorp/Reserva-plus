@@ -67,9 +67,9 @@ Administradores também podem cadastrar espaços e controlar bloqueios de horár
 
 ## Portas Padrão
 
-- frontend: `4200`
-- backend: `8080`
-- banco: `3306`
+- frontend: `4300`
+- backend: `8180`
+- banco: `3310`
 
 ## Rodando com Docker
 
@@ -106,9 +106,9 @@ Quando houver mudança de código no backend ou frontend, prefira usar `-Build` 
 
 ### 3. Acesse
 
-- frontend: `http://localhost:4200`
-- backend: `http://localhost:8080`
-- healthcheck: `http://localhost:8080/actuator/health`
+- frontend: `http://localhost:4300`
+- backend: `http://localhost:8180`
+- healthcheck: `http://localhost:8180/actuator/health`
 
 ### 4. Comandos úteis
 
@@ -158,7 +158,7 @@ Esse profile usa:
 - usuário: `reserva_app`
 - senha: `reserva123`
 
-Esse fluxo usa o MySQL publicado pelo Docker na porta `3306`.
+Esse fluxo usa o MySQL publicado pelo Docker na porta `3310`.
 
 ## Frontend Manual
 
@@ -231,7 +231,7 @@ Endpoints iniciais:
 Exemplo de upload:
 
 ```powershell
-curl -X POST http://localhost:8080/api/espacos/imagens `
+curl -X POST http://localhost:8180/api/espacos/imagens `
   -H "Authorization: Bearer <token-admin>" `
   -F "arquivo=@C:\caminho\imagem.png"
 ```
@@ -280,28 +280,28 @@ Se o PowerShell bloquear `ps1`:
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
-### Porta 8080 em uso
+### Porta 8180 em uso
 
-Se o backend reclamar que a `8080` já está ocupada, provavelmente já existe uma instância rodando.
+Se o backend reclamar que a `8180` já está ocupada, provavelmente já existe uma instância rodando.
 
 Para verificar:
 
 ```powershell
-Get-NetTCPConnection -LocalPort 8080 -State Listen
+Get-NetTCPConnection -LocalPort 8180 -State Listen
 ```
 
-### Porta 4200 em uso
+### Porta 4300 em uso
 
 Se o frontend já estiver aberto, o Angular pode sugerir outra porta.
 
-### Porta 3306 em uso
+### Porta 3310 em uso
 
-Se o MySQL do Docker não subir, provavelmente já existe outro banco ocupando a porta `3306`.
+Se o MySQL do Docker não subir, provavelmente já existe outro banco ocupando a porta `3310`.
 
 Para verificar:
 
 ```powershell
-Get-NetTCPConnection -LocalPort 3306 -State Listen
+Get-NetTCPConnection -LocalPort 3310 -State Listen
 ```
 
 Para encerrar a stack atual:
@@ -325,7 +325,7 @@ docker compose ps
 Se quiser validar rapidamente se o backend está no ar:
 
 ```text
-http://localhost:8080/actuator/health
+http://localhost:8180/actuator/health
 ```
 
 Resposta esperada:
